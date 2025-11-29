@@ -7,7 +7,8 @@ import {
   Minus,
   Search,
   Printer,
-  FileText
+  FileText,
+  Filter
 } from 'lucide-react';
 import { KillStat } from '../types';
 
@@ -15,6 +16,7 @@ interface ComparisonModalProps {
   isOpen: boolean;
   onClose: () => void;
   players: KillStat[];
+  activeWbTab?: 'wb2024' | 'wb2025' | 'general';
 }
 
 interface ComparisonRowProps {
@@ -22,7 +24,7 @@ interface ComparisonRowProps {
   p1Data: any;
   p2Data: any;
   type?: 'header' | 'normal' | 'season';
-  onWin?: (winner: 1 | 2 | 0) => void;
+  winner?: 0 | 1 | 2; // 0 = empate, 1 = p1, 2 = p2
 }
 
 // Internal Component: Searchable Dropdown
@@ -108,51 +110,11 @@ const SearchablePlayerSelect = ({
   );
 };
 
-const ComparisonRow: React.FC<ComparisonRowProps> = ({ label, p1Data, p2Data, type = 'normal', onWin }) => {
+const ComparisonRow: React.FC<ComparisonRowProps> = ({ label, p1Data, p2Data, type = 'normal', winner = 0 }) => {
   const isSeason = type === 'season';
   
-  // Determine winner
-  let p1Win = false;
-  let p2Win = false;
-  
-  if (isSeason) {
-      if (p1Data && p2Data) {
-          p1Win = p1Data.kills > p2Data.kills;
-          p2Win = p2Data.kills > p1Data.kills;
-      } else if (p1Data && !p2Data) {
-          p1Win = true;
-      } else if (!p1Data && p2Data) {
-          p2Win = true;
-      }
-  } else {
-       // Helper to clean string values if needed (though usually processed before)
-       const clean = (val: any) => {
-         if (typeof val === 'string' && val.includes('#')) return parseFloat(val.replace('#', ''));
-         return parseFloat(val);
-       }
-
-       const v1 = clean(p1Data);
-       const v2 = clean(p2Data);
-       
-       if (!isNaN(v1) && !isNaN(v2)) {
-           if (label.includes('Ranking')) {
-               p1Win = v1 < v2; // Lower rank is better
-               p2Win = v2 < v1;
-           } else {
-               p1Win = v1 > v2;
-               p2Win = v2 > v1;
-           }
-       }
-  }
-
-  // Effect to report winner (simplified for render, ideally would be state based but for display row works)
-  useEffect(() => {
-    if (onWin) {
-      if (p1Win) onWin(1);
-      else if (p2Win) onWin(2);
-      else onWin(0);
-    }
-  }, [p1Win, p2Win, label]); // Dependency on logic
+  const p1Win = winner === 1;
+  const p2Win = winner === 2;
 
   const p1Color = p1Win ? 'text-amber-400' : 'text-slate-400';
   const p2Color = p2Win ? 'text-cyan-400' : 'text-slate-400';
@@ -207,12 +169,13 @@ const ComparisonRow: React.FC<ComparisonRowProps> = ({ label, p1Data, p2Data, ty
   );
 };
 
-export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClose, players }) => {
+export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClose, players, activeWbTab }) => {
   const [player1Id, setPlayer1Id] = useState<string>(players[0]?.player || '');
   const [player2Id, setPlayer2Id] = useState<string>(players[1]?.player || '');
   const [isReportMode, setIsReportMode] = useState(false);
+  const [comparisonFilter, setComparisonFilter] = useState<string>('all');
 
-  // Update selected players when the source data changes (e.g., switching tabs)
+  // Update selected players when the source data changes
   useEffect(() => {
       if (players.length > 0 && !players.find(p => p.player === player1Id)) {
           setPlayer1Id(players[0].player);
@@ -222,28 +185,19 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
       }
   }, [players]);
 
+  // Reset filter when closed or tab changes
+  useEffect(() => {
+      setComparisonFilter('all');
+  }, [isOpen, activeWbTab]);
+
   const player1 = useMemo(() => players.find(p => p.player === player1Id), [players, player1Id]);
   const player2 = useMemo(() => players.find(p => p.player === player2Id), [players, player2Id]);
 
-  // Score tracking state
-  const [scores, setScores] = useState({ p1: 0, p2: 0 });
-  const rowWinners = useRef<{[key: string]: number}>({});
-
-  const updateScore = (label: string, winner: 0 | 1 | 2) => {
-    rowWinners.current[label] = winner;
-    let p1 = 0, p2 = 0;
-    Object.values(rowWinners.current).forEach(w => {
-        if (w === 1) p1++;
-        if (w === 2) p2++;
-    });
-    if (p1 !== scores.p1 || p2 !== scores.p2) {
-       setScores({ p1, p2 });
-    }
+  const handlePrint = () => {
+    window.print();
   };
 
-  if (!isOpen) return null;
-
-  // Helper to parse stats from string format "Kills (Matches)"
+  // Helper to parse stats from string format
   const parseStat = (val: string | undefined) => {
     if (!val || val === '- (-)' || val === '0 (0)') return null;
     const parts = val.split(' (');
@@ -253,6 +207,145 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
     return { kills, matches, avg };
   };
 
+  // Helper to calculate total based on current filter
+  const getFilteredStats = (p: KillStat | undefined) => {
+      if (!p) return { kills: 0, matches: 0, kpg: 0 };
+      
+      // Default to stored values if filter is 'all'
+      if (comparisonFilter === 'all') {
+          return { kills: p.totalKills, matches: p.matches, kpg: p.kpg };
+      }
+
+      let kills = 0;
+      let matches = 0;
+
+      const extract = (key: string) => {
+          const val = (p as any)[key];
+          if (val && val !== '- (-)') {
+              const parts = val.split(' (');
+              const k = parseInt(parts[0], 10) || 0;
+              const m = parseInt(parts[1]?.replace(')', ''), 10) || 0;
+              return { k, m };
+          }
+          return { k: 0, m: 0 };
+      };
+
+      let keysToSum: string[] = [];
+      if (activeWbTab === 'general') {
+          keysToSum = [comparisonFilter]; 
+      } else if (activeWbTab === 'wb2024') {
+          if (comparisonFilter === 's1') keysToSum = ['wb2024s1'];
+          else if (comparisonFilter === 's2') keysToSum = ['wb2024s2'];
+      } else if (activeWbTab === 'wb2025') {
+          if (comparisonFilter === 's1') keysToSum = ['wb2025s1'];
+          else if (comparisonFilter === 's2') keysToSum = ['wb2025s2'];
+      }
+
+      keysToSum.forEach(key => {
+          const { k, m } = extract(key);
+          kills += k;
+          matches += m;
+      });
+
+      const kpg = matches > 0 ? parseFloat((kills / matches).toFixed(2)) : 0;
+      return { kills, matches, kpg };
+  };
+
+  if (!isOpen) return null;
+
+  // -- CALCULATE DATA & SCORES --
+  const p1Stats = getFilteredStats(player1);
+  const p2Stats = getFilteredStats(player2);
+  
+  let p1Score = 0;
+  let p2Score = 0;
+
+  // Helper to check winner
+  const checkWinner = (v1: number, v2: number, inverse = false) => {
+      if (v1 === v2) return 0;
+      if (inverse) return v1 < v2 ? 1 : 2;
+      return v1 > v2 ? 1 : 2;
+  };
+
+  // Define Main Rows
+  const rows = [
+      {
+          label: "Ranking Geral",
+          p1Data: `#${player1?.rank}`,
+          p2Data: `#${player2?.rank}`,
+          winner: checkWinner(player1?.rank || 9999, player2?.rank || 9999, true)
+      },
+      {
+          label: "Total Abates (Filtrado)",
+          p1Data: p1Stats.kills,
+          p2Data: p2Stats.kills,
+          winner: checkWinner(p1Stats.kills, p2Stats.kills)
+      },
+      {
+          label: "Partidas (Filtrado)",
+          p1Data: p1Stats.matches,
+          p2Data: p2Stats.matches,
+          winner: checkWinner(p1Stats.matches, p2Stats.matches)
+      },
+      {
+          label: "Média (KPG)",
+          p1Data: p1Stats.kpg.toFixed(2),
+          p2Data: p2Stats.kpg.toFixed(2),
+          winner: checkWinner(p1Stats.kpg, p2Stats.kpg)
+      }
+  ];
+
+  // Optional Split Rows (only if filter is All)
+  if (comparisonFilter === 'all') {
+      const addSplitRow = (label: string, key: keyof KillStat) => {
+          const v1 = (player1 as any)?.[key] || 0;
+          const v2 = (player2 as any)?.[key] || 0;
+          if (v1 > 0 || v2 > 0) {
+               rows.push({
+                   label,
+                   p1Data: v1,
+                   p2Data: v2,
+                   winner: checkWinner(v1, v2)
+               });
+          }
+      };
+
+      addSplitRow("Abates 25 S2", "kills25s2");
+      addSplitRow("Abates 25 S1", "kills25s1");
+      addSplitRow("Abates 24 S2", "kills24s2");
+      addSplitRow("Abates 24 S1", "kills24s1");
+  }
+
+  // Detailed Stats
+  const detailedKeys: {k: keyof KillStat, l: string}[] = [
+      { k: 'headshots', l: 'Capas (Total)' },
+      { k: 'knockdowns', l: 'Derrubados (Total)' },
+      { k: 'gloowalls', l: 'Gelos (Total)' }
+  ];
+
+  detailedKeys.forEach(({k, l}) => {
+      const v1 = (player1 as any)?.[k];
+      const v2 = (player2 as any)?.[k];
+      if (v1 !== undefined || v2 !== undefined) {
+          const safeV1 = v1 || 0;
+          const safeV2 = v2 || 0;
+          rows.push({
+              label: l,
+              p1Data: safeV1,
+              p2Data: safeV2,
+              winner: checkWinner(safeV1, safeV2)
+          });
+      }
+  });
+
+  // Calculate Score from main rows
+  rows.forEach(r => {
+      if (r.winner === 1) p1Score++;
+      else if (r.winner === 2) p2Score++;
+  });
+
+
+  // Season Rows
   const seasons = [
     { key: 'lbff9', label: 'LBFF 9' },
     { key: 'lbff8', label: 'LBFF 8' },
@@ -264,15 +357,74 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
     { key: 'lbff1', label: 'LBFF 1' },
   ];
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const seasonRows = seasons.map(season => {
+       const p1Stat = parseStat((player1 as any)?.[season.key]);
+       const p2Stat = parseStat((player2 as any)?.[season.key]);
 
-  // Logic to determine if specific split columns should be shown
-  const show24S1 = (player1?.kills24s1 || 0) > 0 || (player2?.kills24s1 || 0) > 0;
-  const show24S2 = (player1?.kills24s2 || 0) > 0 || (player2?.kills24s2 || 0) > 0;
-  const show25S1 = (player1?.kills25s1 || 0) > 0 || (player2?.kills25s1 || 0) > 0;
-  const show25S2 = (player1?.kills25s2 || 0) > 0 || (player2?.kills25s2 || 0) > 0;
+       if (!p1Stat && !p2Stat) return null;
+
+       let winner: 0|1|2 = 0;
+       if (p1Stat && p2Stat) {
+          if (p1Stat.kills > p2Stat.kills) winner = 1;
+          else if (p2Stat.kills > p1Stat.kills) winner = 2;
+       } else if (p1Stat) winner = 1;
+       else if (p2Stat) winner = 2;
+
+       return {
+           label: season.label,
+           p1Data: p1Stat,
+           p2Data: p2Stat,
+           type: 'season' as const,
+           winner
+       };
+  }).filter(Boolean);
+
+  // Add seasons to score
+  seasonRows.forEach(r => {
+      if (r?.winner === 1) p1Score++;
+      else if (r?.winner === 2) p2Score++;
+  });
+
+
+  // Logic to determine if specific split columns should be shown (Only in 'All' mode) - handled via rows generation logic above.
+
+  // Render Filter Buttons
+  const renderFilterButtons = () => {
+      if (!activeWbTab) return null;
+      
+      const FilterBtn = ({ val, label }: { val: string, label: string }) => (
+          <button 
+             onClick={() => setComparisonFilter(val)}
+             className={`px-2 py-1 text-[10px] uppercase font-bold rounded border ${comparisonFilter === val ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50' : 'bg-black/20 text-slate-500 border-white/5'}`}
+          >
+              {label}
+          </button>
+      );
+
+      return (
+          <div className="flex items-center gap-2 justify-center mt-4 p-2 bg-white/5 rounded-lg border border-white/5 w-fit mx-auto">
+             <Filter className="w-3 h-3 text-slate-500" />
+             <FilterBtn val="all" label="Todos" />
+             {activeWbTab === 'general' && (
+                 <>
+                    <div className="w-px h-3 bg-white/10" />
+                    <FilterBtn val="wb24s1" label="24 S1" />
+                    <FilterBtn val="wb24s2" label="24 S2" />
+                    <div className="w-px h-3 bg-white/10" />
+                    <FilterBtn val="wb25s1" label="25 S1" />
+                    <FilterBtn val="wb25s2" label="25 S2" />
+                 </>
+             )}
+             {(activeWbTab === 'wb2024' || activeWbTab === 'wb2025') && (
+                 <>
+                    <div className="w-px h-3 bg-white/10" />
+                    <FilterBtn val="s1" label="Split 1" />
+                    <FilterBtn val="s2" label="Split 2" />
+                 </>
+             )}
+          </div>
+      );
+  };
 
   return (
     <div 
@@ -337,7 +489,7 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Jogador 01</div>
                    {/* Score for P1 */}
                    <div className="text-xs font-bold text-amber-500 mt-1 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" /> Vence em {scores.p1} categorias
+                      <TrendingUp className="w-3 h-3" /> Vence em {p1Score} categorias
                    </div>
                 </div>
             </div>
@@ -370,11 +522,15 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Jogador 02</div>
                    {/* Score for P2 */}
                    <div className="text-xs font-bold text-cyan-400 mt-1 flex items-center gap-1">
-                      Vence em {scores.p2} categorias <TrendingUp className="w-3 h-3" /> 
+                      Vence em {p2Score} categorias <TrendingUp className="w-3 h-3" /> 
                    </div>
                 </div>
             </div>
           </div>
+          
+          {/* Filters UI */}
+          {!isReportMode && renderFilterButtons()}
+
         </div>
 
         {/* Scrollable Content */}
@@ -385,94 +541,18 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
                <span>Dados Oficiais: {player1?.events || 'Comparação'}</span>
            </div>
 
-           {/* General Stats */}
+           {/* General Stats Rows */}
            {player1 && player2 && (
              <div className="mb-4">
-               <ComparisonRow 
-                 label="Ranking Geral" 
-                 p1Data={`#${player1.rank}`} 
-                 p2Data={`#${player2.rank}`} 
-                 onWin={(w) => updateScore('rank', w)} 
-                />
-               <ComparisonRow 
-                 label="Total Abates" 
-                 p1Data={player1.totalKills} 
-                 p2Data={player2.totalKills} 
-                 onWin={(w) => updateScore('kills', w)} 
-                />
-               
-               {/* Show specific splits if available in context */}
-               {show25S2 && (
-                   <ComparisonRow 
-                     label="Abates 25 S2" 
-                     p1Data={player1.kills25s2 || 0} 
-                     p2Data={player2.kills25s2 || 0} 
-                     onWin={(w) => updateScore('k25s2', w)} 
-                    />
-               )}
-               {show25S1 && (
-                   <ComparisonRow 
-                     label="Abates 25 S1" 
-                     p1Data={player1.kills25s1 || 0} 
-                     p2Data={player2.kills25s1 || 0} 
-                     onWin={(w) => updateScore('k25s1', w)} 
-                    />
-               )}
-               {show24S2 && (
-                   <ComparisonRow 
-                     label="Abates 24 S2" 
-                     p1Data={player1.kills24s2 || 0} 
-                     p2Data={player2.kills24s2 || 0} 
-                     onWin={(w) => updateScore('k24s2', w)} 
-                    />
-               )}
-               {show24S1 && (
-                   <ComparisonRow 
-                     label="Abates 24 S1" 
-                     p1Data={player1.kills24s1 || 0} 
-                     p2Data={player2.kills24s1 || 0} 
-                     onWin={(w) => updateScore('k24s1', w)} 
-                    />
-               )}
-
-               <ComparisonRow 
-                 label="Partidas (Total)" 
-                 p1Data={player1.matches} 
-                 p2Data={player2.matches} 
-                 onWin={(w) => updateScore('matches', w)} 
-               />
-               <ComparisonRow 
-                 label="Média (KPG)" 
-                 p1Data={player1.kpg.toFixed(2)} 
-                 p2Data={player2.kpg.toFixed(2)} 
-                 onWin={(w) => updateScore('kpg', w)} 
-               />
-               
-               {/* Detailed Stats */}
-               {(player1.headshots !== undefined || player2.headshots !== undefined) && (
-                   <ComparisonRow 
-                     label="Capas" 
-                     p1Data={player1.headshots || 0} 
-                     p2Data={player2.headshots || 0} 
-                     onWin={(w) => updateScore('headshots', w)} 
-                   />
-               )}
-                {(player1.knockdowns !== undefined || player2.knockdowns !== undefined) && (
-                   <ComparisonRow 
-                     label="Derrubados" 
-                     p1Data={player1.knockdowns || 0} 
-                     p2Data={player2.knockdowns || 0} 
-                     onWin={(w) => updateScore('knockdowns', w)} 
-                   />
-               )}
-                {(player1.gloowalls !== undefined || player2.gloowalls !== undefined) && (
-                   <ComparisonRow 
-                     label="Gelos" 
-                     p1Data={player1.gloowalls || 0} 
-                     p2Data={player2.gloowalls || 0} 
-                     onWin={(w) => updateScore('gloowalls', w)} 
-                   />
-               )}
+                 {rows.map((row, idx) => (
+                     <ComparisonRow
+                        key={idx}
+                        label={row.label}
+                        p1Data={row.p1Data}
+                        p2Data={row.p2Data}
+                        winner={row.winner as 0|1|2}
+                     />
+                 ))}
              </div>
            )}
 
@@ -484,24 +564,16 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
            {/* Seasons List */}
            {player1 && player2 && (
                <div className="pb-8">
-                   {seasons.map(season => {
-                       const p1Stat = parseStat((player1 as any)[season.key]);
-                       const p2Stat = parseStat((player2 as any)[season.key]);
-
-                       // Only show if at least one played
-                       if (!p1Stat && !p2Stat) return null;
-
-                       return (
-                           <ComparisonRow 
-                             key={season.key}
-                             label={season.label} 
-                             p1Data={p1Stat} 
-                             p2Data={p2Stat} 
-                             type="season"
-                             onWin={(w) => updateScore(season.key, w)}
-                           />
-                       );
-                   })}
+                   {seasonRows.map((row, idx) => (
+                       <ComparisonRow 
+                         key={idx}
+                         label={row!.label} 
+                         p1Data={row!.p1Data} 
+                         p2Data={row!.p2Data} 
+                         type="season"
+                         winner={row!.winner as 0|1|2}
+                       />
+                   ))}
                </div>
            )}
            

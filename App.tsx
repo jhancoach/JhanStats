@@ -8,7 +8,7 @@ import { ComparisonModal } from './components/ComparisonModal';
 import { EntryScreen } from './components/EntryScreen';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
-import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers } from 'lucide-react';
+import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter } from 'lucide-react';
 
 // New Split CSV Links
 const WB_2024_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYc8m8JZnDeFr3FeN97I4NJwwuc0P1uN8v6JEv06_OflL5QCr_4t75yOe-xkqC9TnS3Cf-tRLT4aDZ/pub?output=csv';
@@ -17,11 +17,13 @@ const WB_2025_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuAwNL2
 const WB_2025_S2_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRoO1Pp7JVxMOkf29n3_A4LYISkXrkqglqsL9ajgw68igKnk_7TtUXaLFJuJZ4whzaRpWD2akh8YeK9/pub?output=csv';
 
 export type WBSubTab = 'wb2024' | 'wb2025' | 'general';
+export type SplitFilter = 'all' | 's1' | 's2' | 'wb24s1' | 'wb24s2' | 'wb25s1' | 'wb25s2';
 
 const App: React.FC = () => {
   const [showEntry, setShowEntry] = useState(true);
   const [activeTab, setActiveTab] = useState<'kills' | 'earnings' | 'ffwsbr'>('kills');
-  const [wbSubTab, setWbSubTab] = useState<WBSubTab>('wb2025'); // Default to current year
+  const [wbSubTab, setWbSubTab] = useState<WBSubTab>('general'); // Default to General as requested
+  const [splitFilter, setSplitFilter] = useState<SplitFilter>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<KillStat | null>(null);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
@@ -41,6 +43,11 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [playerToEdit, setPlayerToEdit] = useState<KillStat | null>(null);
+
+  // Reset filter when subtab changes
+  useEffect(() => {
+    setSplitFilter('all');
+  }, [wbSubTab]);
 
   // Fetch all WB Data
   useEffect(() => {
@@ -90,12 +97,18 @@ const App: React.FC = () => {
                   gloowallsDestroyed: getVal(idxGelosDestr),
                   revives: getVal(idxRevives),
                   alliesRevived: getVal(idxAlliesRev),
-                  // Initialize specific split data
+                  // Initialize specific split data (will be populated during merge)
                   kills24s1: 0, kills24s2: 0, kills25s1: 0, kills25s2: 0
               };
               
-              // Assign the current split kills to the specific property
+              // Assign the current split kills to the specific property for this row
               statObj[splitKey] = kills;
+
+              // VITAL: Populate the string format "Kills (Matches)" for the Modal Chart
+              if (splitKey === 'kills24s1') (statObj as any).wb2024s1 = `${kills} (${matches})`;
+              if (splitKey === 'kills24s2') (statObj as any).wb2024s2 = `${kills} (${matches})`;
+              if (splitKey === 'kills25s1') (statObj as any).wb2025s1 = `${kills} (${matches})`;
+              if (splitKey === 'kills25s2') (statObj as any).wb2025s2 = `${kills} (${matches})`;
 
               return statObj;
           });
@@ -124,27 +137,33 @@ const App: React.FC = () => {
     fetchAllWBData();
   }, []);
 
-  // Merge Logic
+  // Merge Logic with Filtering
   const mergedFFWSData = useMemo(() => {
       let datasets: KillStat[][] = [];
 
-      // Always include relevant datasets for the view, but we handle aggregation generally
-      if (wbSubTab === 'wb2024') {
-          datasets = [raw24s1, raw24s2];
+      // Determine datasets based on active tab AND split filter
+      if (wbSubTab === 'general') {
+          if (splitFilter === 'all') datasets = [raw24s1, raw24s2, raw25s1, raw25s2];
+          else if (splitFilter === 'wb24s1') datasets = [raw24s1];
+          else if (splitFilter === 'wb24s2') datasets = [raw24s2];
+          else if (splitFilter === 'wb25s1') datasets = [raw25s1];
+          else if (splitFilter === 'wb25s2') datasets = [raw25s2];
+      } else if (wbSubTab === 'wb2024') {
+          if (splitFilter === 'all') datasets = [raw24s1, raw24s2];
+          else if (splitFilter === 's1') datasets = [raw24s1];
+          else if (splitFilter === 's2') datasets = [raw24s2];
       } else if (wbSubTab === 'wb2025') {
-          datasets = [raw25s1, raw25s2];
-      } else { // General
-          datasets = [raw24s1, raw24s2, raw25s1, raw25s2];
+          if (splitFilter === 'all') datasets = [raw25s1, raw25s2];
+          else if (splitFilter === 's1') datasets = [raw25s1];
+          else if (splitFilter === 's2') datasets = [raw25s2];
       }
 
       const playerMap = new Map<string, KillStat>();
 
-      // Normalization function to handle case sensitivity and known duplicates
       const normalizeName = (name: string): string => {
          const n = name.trim();
          const lower = n.toLowerCase();
-
-         // Map known inconsistencies to preferred format
+         // ... normalization rules same as before ...
          if (lower === 'nickz7') return 'Nickz7';
          if (lower === 'but' || lower === 'butzin') return 'BuTziN';
          if (lower === 'motovea' || lower === 'motovea7') return 'Motovea';
@@ -155,15 +174,12 @@ const App: React.FC = () => {
          if (lower === 'bops') return 'Bops';
          if (lower === 'bahiaz7') return 'BahiaZ7';
          if (lower === 'nando9') return 'NANDO9';
-         
-         // Fixes for specific cases requested
          if (lower === 'xtrap7' || lower === 'trap' || lower === 'trap7') return 'TRAP7';
          if (lower === 'yago.exe' || lower === 'yago') return 'Yago';
          if (lower === 'cauan7' || lower === 'cauan') return 'Cauan';
          if (lower === 'italo7' || lower === 'italo') return 'ITALO$$';
          if (lower === 'xguaxa7' || lower === 'guaxa' || lower === 'guaxa7') return 'GUAXA7';
          if (lower === 'bombom7' || lower === 'bombom') return 'BOMBOM';
-
          return n;
       };
 
@@ -173,22 +189,18 @@ const App: React.FC = () => {
               const key = standardizedName.toLowerCase();
               
               if (!playerMap.has(key)) {
-                  // Initialize with standardized name
                   playerMap.set(key, { ...p, player: standardizedName });
               } else {
                   const existing = playerMap.get(key)!;
                   
-                  // If we have an existing entry, ensure we use the best casing (e.g. Mixed case over ALL CAPS)
-                  // unless it's one of our forced normalizations which is already correct.
                   if (existing.player !== standardizedName) {
                       const isUpper = (s: string) => s === s.toUpperCase() && s !== s.toLowerCase();
-                      // If existing is ALL CAPS and new is not, prefer new (Mixed Case)
                       if (isUpper(existing.player) && !isUpper(standardizedName)) {
                           existing.player = standardizedName;
                       }
                   }
 
-                  // Sum detailed stats
+                  // Sum detailed stats based on filtered datasets
                   existing.totalKills += p.totalKills;
                   existing.matches += p.matches;
                   existing.headshots = (existing.headshots || 0) + (p.headshots || 0);
@@ -198,13 +210,19 @@ const App: React.FC = () => {
                   existing.revives = (existing.revives || 0) + (p.revives || 0);
                   existing.alliesRevived = (existing.alliesRevived || 0) + (p.alliesRevived || 0);
 
-                  // Sum specific splits (since they are 0 in other datasets, simple addition works)
+                  // Accumulate split specific totals regardless of filter (for chart context, etc)
+                  // Note: Since 'datasets' only contains what we want to show in Total/Rank,
+                  // we still want to preserve the specific split data properties if they exist on 'p'
                   existing.kills24s1 = (existing.kills24s1 || 0) + (p.kills24s1 || 0);
                   existing.kills24s2 = (existing.kills24s2 || 0) + (p.kills24s2 || 0);
                   existing.kills25s1 = (existing.kills25s1 || 0) + (p.kills25s1 || 0);
                   existing.kills25s2 = (existing.kills25s2 || 0) + (p.kills25s2 || 0);
+
+                  if ((p as any).wb2024s1) (existing as any).wb2024s1 = (p as any).wb2024s1;
+                  if ((p as any).wb2024s2) (existing as any).wb2024s2 = (p as any).wb2024s2;
+                  if ((p as any).wb2025s1) (existing as any).wb2025s1 = (p as any).wb2025s1;
+                  if ((p as any).wb2025s2) (existing as any).wb2025s2 = (p as any).wb2025s2;
                   
-                  // Update team if missing or different (simple logic: take latest valid)
                   if (p.team && p.team !== '-' && p.team !== existing.team) {
                       existing.team = p.team;
                   }
@@ -212,7 +230,6 @@ const App: React.FC = () => {
           });
       });
 
-      // Recalculate KPG and Sort
       return Array.from(playerMap.values())
           .map(p => ({
               ...p,
@@ -222,7 +239,21 @@ const App: React.FC = () => {
           .sort((a, b) => b.totalKills - a.totalKills)
           .map((p, i) => ({ ...p, rank: i + 1 }));
 
-  }, [raw24s1, raw24s2, raw25s1, raw25s2, wbSubTab]);
+  }, [raw24s1, raw24s2, raw25s1, raw25s2, wbSubTab, splitFilter]);
+
+  // Helper for filter buttons style
+  const FilterButton = ({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${
+        active 
+          ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' 
+          : 'bg-black/40 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+      }`}
+    >
+      {label}
+    </button>
+  );
 
 
   const handlePlayerClick = (player: any) => {
@@ -445,25 +476,54 @@ const App: React.FC = () => {
 
           {/* Sub Navigation for WB */}
           {activeTab === 'ffwsbr' && (
-            <div className="mb-8 flex flex-wrap gap-2">
-                <button
-                    onClick={() => setWbSubTab('wb2024')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'wb2024' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-indigo-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
-                >
-                    <Calendar className="w-4 h-4" /> WB 2024 DADOS GERAIS
-                </button>
-                <button
-                    onClick={() => setWbSubTab('wb2025')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'wb2025' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-indigo-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
-                >
-                    <Calendar className="w-4 h-4" /> WB 2025 DADOS GERAIS
-                </button>
-                <button
-                    onClick={() => setWbSubTab('general')}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'general' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25 ring-1 ring-purple-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
-                >
-                    <Layers className="w-4 h-4" /> WB GERAL (TODOS)
-                </button>
+            <div className="mb-8 flex flex-col gap-4">
+                {/* Main Tabs */}
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => setWbSubTab('general')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'general' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25 ring-1 ring-purple-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        <Layers className="w-4 h-4" /> WB GERAL (TODOS)
+                    </button>
+                    <button
+                        onClick={() => setWbSubTab('wb2024')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'wb2024' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-indigo-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        <Calendar className="w-4 h-4" /> WB 2024 DADOS GERAIS
+                    </button>
+                    <button
+                        onClick={() => setWbSubTab('wb2025')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'wb2025' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-indigo-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        <Calendar className="w-4 h-4" /> WB 2025 DADOS GERAIS
+                    </button>
+                </div>
+
+                {/* Split Filters */}
+                <div className="flex items-center gap-2 px-4 py-3 bg-white/5 rounded-xl border border-white/5 w-fit">
+                    <Filter className="w-4 h-4 text-slate-500 mr-2" />
+                    
+                    <FilterButton label="Todos" active={splitFilter === 'all'} onClick={() => setSplitFilter('all')} />
+
+                    {wbSubTab === 'general' && (
+                        <>
+                           <div className="w-px h-4 bg-white/10 mx-1"></div>
+                           <FilterButton label="24 Split 1" active={splitFilter === 'wb24s1'} onClick={() => setSplitFilter('wb24s1')} />
+                           <FilterButton label="24 Split 2" active={splitFilter === 'wb24s2'} onClick={() => setSplitFilter('wb24s2')} />
+                           <div className="w-px h-4 bg-white/10 mx-1"></div>
+                           <FilterButton label="25 Split 1" active={splitFilter === 'wb25s1'} onClick={() => setSplitFilter('wb25s1')} />
+                           <FilterButton label="25 Split 2" active={splitFilter === 'wb25s2'} onClick={() => setSplitFilter('wb25s2')} />
+                        </>
+                    )}
+
+                    {(wbSubTab === 'wb2024' || wbSubTab === 'wb2025') && (
+                         <>
+                           <div className="w-px h-4 bg-white/10 mx-1"></div>
+                           <FilterButton label="Split 1" active={splitFilter === 's1'} onClick={() => setSplitFilter('s1')} />
+                           <FilterButton label="Split 2" active={splitFilter === 's2'} onClick={() => setSplitFilter('s2')} />
+                        </>
+                    )}
+                </div>
             </div>
           )}
 
@@ -479,7 +539,7 @@ const App: React.FC = () => {
                   </div>
               ) : (
                   <DataTable 
-                    key={`${activeTab}-${wbSubTab}`} // Force remount on subtab change
+                    key={`${activeTab}-${wbSubTab}-${splitFilter}`} // Force remount on subtab/filter change
                     type={activeTab}
                     subTab={wbSubTab} // Pass subtab to handle columns
                     data={getCurrentData()}
@@ -527,6 +587,7 @@ const App: React.FC = () => {
           isOpen={isComparisonOpen}
           onClose={() => setIsComparisonOpen(false)}
           players={activeTab === 'ffwsbr' ? mergedFFWSData : killStats}
+          activeWbTab={wbSubTab} // Pass the context of the current WB view
         />
 
         {/* Admin Login Modal */}
