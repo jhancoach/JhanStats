@@ -10,7 +10,8 @@ import {
   FileText,
   Filter,
   User,
-  Medal
+  Medal,
+  Trophy
 } from 'lucide-react';
 import { KillStat } from '../types';
 
@@ -135,74 +136,103 @@ const ComparisonRow: React.FC<ComparisonRowProps> = ({ label, p1Data, p2Data, ty
 
   // Calculate width percentages relative to the max value of the two (or global max)
   const localMax = maxValue || Math.max(val1, val2) || 1;
+  // Limit max width to 95% to leave a tiny bit of space
   const p1Width = Math.min(100, (val1 / localMax) * 100);
   const p2Width = Math.min(100, (val2 / localMax) * 100);
 
   const p1Win = winner === 1;
   const p2Win = winner === 2;
 
-  const p1Color = p1Win ? 'text-amber-400' : 'text-slate-400';
-  const p2Color = p2Win ? 'text-indigo-400' : 'text-slate-400';
-  const p1BarColor = p1Win ? 'bg-amber-500' : 'bg-slate-700';
-  const p2BarColor = p2Win ? 'bg-indigo-500' : 'bg-slate-700';
+  // Visual Styles
+  const p1TextClass = p1Win ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-slate-500';
+  const p2TextClass = p2Win ? 'text-indigo-400 drop-shadow-[0_0_8px_rgba(129,140,248,0.5)]' : 'text-slate-500';
+  
+  const p1BarGradient = p1Win 
+    ? 'bg-gradient-to-l from-amber-400 to-amber-600 shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
+    : 'bg-slate-700/50';
+  
+  const p2BarGradient = p2Win 
+    ? 'bg-gradient-to-r from-indigo-400 to-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.4)]' 
+    : 'bg-slate-700/50';
 
   return (
-    <div className="relative grid grid-cols-[1fr_auto_1fr] gap-4 items-center py-3 px-2 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors group">
+    <div className="relative flex items-center gap-2 py-3 px-2 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors group">
       
-      {/* Player 1 (Left) */}
-      <div className="relative flex flex-col items-end justify-center h-full">
-         <div className="flex items-center gap-2 mb-1 z-10 relative">
+      {/* --- PLAYER 1 (LEFT SIDE) --- */}
+      <div className="flex-1 flex flex-col items-end min-w-0">
+         
+         {/* Stats Display */}
+         <div className="flex items-center gap-2 mb-1.5 z-10 relative">
              {isSeason ? (
                  p1Data ? (
-                   <>
-                      <span className={`text-[10px] text-slate-500 font-medium bg-black/40 px-1.5 rounded hidden sm:inline-block`}>{p1Data.matches}J</span>
-                      <span className={`font-mono text-xs opacity-70 ${p1Win ? 'text-amber-500' : 'text-slate-500'}`}>{p1Data.avg} Ø</span>
-                      <span className={`text-lg font-mono font-bold leading-none ${p1Color}`}>{p1Data.kills}</span>
-                   </>
-                 ) : <Minus className="w-4 h-4 text-slate-700" />
+                   <div className="flex flex-col items-end leading-none">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className={`text-lg font-mono font-bold ${p1TextClass}`}>{p1Data.kills}</span>
+                        {p1Win && <Trophy className="w-3 h-3 text-amber-500 mb-0.5" />}
+                      </div>
+                      <div className="flex gap-2 text-[10px] text-slate-600 font-medium mt-0.5">
+                         <span>{p1Data.matches}J</span>
+                         <span>•</span>
+                         <span>{p1Data.avg} Ø</span>
+                      </div>
+                   </div>
+                 ) : <Minus className="w-4 h-4 text-slate-800" />
              ) : (
-                 <span className={`text-base md:text-lg font-mono font-bold ${p1Color}`}>{p1Data}</span>
+                 <span className={`text-base md:text-xl font-mono font-bold ${p1TextClass}`}>{p1Data}</span>
              )}
          </div>
-         {/* Bar Background */}
-         <div className="w-full h-1.5 bg-slate-800/50 rounded-full overflow-hidden flex justify-end">
+
+         {/* Bar Track & Fill (Right to Left) */}
+         <div className="w-full h-2 bg-slate-800/40 rounded-full overflow-hidden flex justify-end relative">
             <div 
-                className={`h-full rounded-full transition-all duration-700 ease-out ${p1BarColor} ${p1Win ? 'opacity-100 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'opacity-40'}`} 
+                className={`h-full rounded-l-full transition-all duration-700 ease-out ${p1BarGradient} ${p1Win ? 'opacity-100' : 'opacity-60 grayscale'}`} 
                 style={{ width: `${p1Width}%` }} 
             />
          </div>
       </div>
 
-      {/* Label (Center) */}
-      <div className="w-24 md:w-32 flex justify-center">
-         <div className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">
+      {/* --- CENTRAL LABEL --- */}
+      <div className="w-20 md:w-32 shrink-0 flex flex-col items-center justify-center relative z-20">
+         {/* Connecting Line behind label */}
+         <div className="absolute top-1/2 left-0 w-full h-px bg-white/5 -z-10"></div>
+         <div className="px-3 py-1 bg-[#0B0F19] border border-white/10 rounded-md shadow-xl text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center whitespace-nowrap z-10 backdrop-blur-sm">
             {label}
          </div>
       </div>
 
-      {/* Player 2 (Right) */}
-      <div className="relative flex flex-col items-start justify-center h-full">
-         <div className="flex items-center gap-2 mb-1 z-10 relative">
+      {/* --- PLAYER 2 (RIGHT SIDE) --- */}
+      <div className="flex-1 flex flex-col items-start min-w-0">
+         
+         {/* Stats Display */}
+         <div className="flex items-center gap-2 mb-1.5 z-10 relative">
              {isSeason ? (
                  p2Data ? (
-                   <>
-                      <span className={`text-lg font-mono font-bold leading-none ${p2Color}`}>{p2Data.kills}</span>
-                      <span className={`font-mono text-xs opacity-70 ${p2Win ? 'text-indigo-500' : 'text-slate-500'}`}>{p2Data.avg} Ø</span>
-                      <span className={`text-[10px] text-slate-500 font-medium bg-black/40 px-1.5 rounded hidden sm:inline-block`}>{p2Data.matches}J</span>
-                   </>
-                 ) : <Minus className="w-4 h-4 text-slate-700" />
+                   <div className="flex flex-col items-start leading-none">
+                      <div className="flex items-baseline gap-1.5">
+                        {p2Win && <Trophy className="w-3 h-3 text-indigo-500 mb-0.5" />}
+                        <span className={`text-lg font-mono font-bold ${p2TextClass}`}>{p2Data.kills}</span>
+                      </div>
+                      <div className="flex gap-2 text-[10px] text-slate-600 font-medium mt-0.5">
+                         <span>{p2Data.matches}J</span>
+                         <span>•</span>
+                         <span>{p2Data.avg} Ø</span>
+                      </div>
+                   </div>
+                 ) : <Minus className="w-4 h-4 text-slate-800" />
              ) : (
-                 <span className={`text-base md:text-lg font-mono font-bold ${p2Color}`}>{p2Data}</span>
+                 <span className={`text-base md:text-xl font-mono font-bold ${p2TextClass}`}>{p2Data}</span>
              )}
          </div>
-         {/* Bar Background */}
-         <div className="w-full h-1.5 bg-slate-800/50 rounded-full overflow-hidden flex justify-start">
+
+         {/* Bar Track & Fill (Left to Right) */}
+         <div className="w-full h-2 bg-slate-800/40 rounded-full overflow-hidden flex justify-start relative">
             <div 
-                className={`h-full rounded-full transition-all duration-700 ease-out ${p2BarColor} ${p2Win ? 'opacity-100 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'opacity-40'}`} 
+                className={`h-full rounded-r-full transition-all duration-700 ease-out ${p2BarGradient} ${p2Win ? 'opacity-100' : 'opacity-60 grayscale'}`} 
                 style={{ width: `${p2Width}%` }} 
             />
          </div>
       </div>
+
     </div>
   );
 };
@@ -474,7 +504,7 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm transition-opacity" onClick={onClose} />
       )}
       
-      <div className={`relative bg-[#0B0F19] border border-white/10 shadow-2xl w-full flex flex-col overflow-hidden ring-1 ring-white/5 transition-all duration-300 ${isReportMode ? 'h-full w-full rounded-none border-0' : 'max-w-5xl max-h-[95vh] rounded-3xl'}`}>
+      <div className={`relative bg-[#0B0F19] border border-white/10 shadow-2xl w-full flex flex-col overflow-hidden ring-1 ring-white/5 transition-all duration-300 ${isReportMode ? 'h-full w-full rounded-none border-0' : 'max-w-5xl max-h-[90dvh] rounded-3xl'}`}>
         
         {/* Top Actions Bar */}
         <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-50 pointer-events-none">
@@ -508,7 +538,7 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Header / Players Select */}
-        <div className="pt-20 pb-8 px-6 md:px-12 bg-gradient-to-b from-[#111827] to-[#0B0F19] shrink-0 border-b border-white/5">
+        <div className="pt-16 md:pt-20 pb-6 md:pb-8 px-4 md:px-12 bg-gradient-to-b from-[#111827] to-[#0B0F19] shrink-0 border-b border-white/5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-12">
             
             {/* Player 1 Block */}
@@ -602,7 +632,7 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Scrollable Content */}
-        <div className={`custom-scrollbar bg-[#0B0F19] relative px-4 md:px-12 py-8 flex-1 ${isReportMode ? 'overflow-visible h-auto' : 'overflow-y-auto'}`}>
+        <div className={`custom-scrollbar bg-[#0B0F19] relative px-4 md:px-12 py-8 flex-1 min-h-0 ${isReportMode ? 'overflow-visible h-auto' : 'overflow-y-auto'}`}>
            
            {/* General Stats Rows */}
            {player1 && player2 && (

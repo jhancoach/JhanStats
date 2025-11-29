@@ -1,18 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { KillStat, EarningStat, SortConfig } from '../types';
 import { ArrowUpDown, Download, Search, Trophy, TrendingUp, Filter, ChevronDown, Pencil, Globe } from 'lucide-react';
-import { WBSubTab } from '../App';
+import { WBSubTab, SplitFilter } from '../App';
 
 interface DataTableProps {
   data: any[];
   type: 'kills' | 'earnings' | 'ffwsbr';
   subTab?: WBSubTab;
+  splitFilter?: SplitFilter;
   onPlayerClick?: (player: any) => void;
   isAdmin?: boolean;
   onEditPlayer?: (player: any) => void;
 }
 
-export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, onPlayerClick, isAdmin, onEditPlayer }) => {
+export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitFilter = 'all', onPlayerClick, isAdmin, onEditPlayer }) => {
   const [filter, setFilter] = useState('');
   const [seasonFilter, setSeasonFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig<any>>({
@@ -80,18 +81,24 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, onPlay
             { key: 'kpg', label: 'Média', width: 'w-24 min-w-[80px]' }, // Added Average Column
          ];
 
-         // Inject Split specific columns based on active subtab
-         if (subTab === 'wb2024' || subTab === 'general') {
-            cols.push(
-               { key: 'kills24s1', label: 'Abates 24 S1', width: 'w-24 min-w-[90px]', special: true },
-               { key: 'kills24s2', label: 'Abates 24 S2', width: 'w-24 min-w-[90px]', special: true }
-            );
+         // Visibility Logic for Columns based on Split Filter and Year Tab
+         const show24S1 = (subTab === 'general' && (splitFilter === 'all' || splitFilter === 'wb24s1')) || (subTab === 'wb2024' && (splitFilter === 'all' || splitFilter === 's1'));
+         const show24S2 = (subTab === 'general' && (splitFilter === 'all' || splitFilter === 'wb24s2')) || (subTab === 'wb2024' && (splitFilter === 'all' || splitFilter === 's2'));
+         const show25S1 = (subTab === 'general' && (splitFilter === 'all' || splitFilter === 'wb25s1')) || (subTab === 'wb2025' && (splitFilter === 'all' || splitFilter === 's1'));
+         const show25S2 = (subTab === 'general' && (splitFilter === 'all' || splitFilter === 'wb25s2')) || (subTab === 'wb2025' && (splitFilter === 'all' || splitFilter === 's2'));
+
+         // Inject Split specific columns based on active subtab AND filter
+         if (show24S1) {
+            cols.push({ key: 'kills24s1', label: 'Abates 24 S1', width: 'w-24 min-w-[90px]', special: true });
          }
-         if (subTab === 'wb2025' || subTab === 'general') {
-            cols.push(
-               { key: 'kills25s1', label: 'Abates 25 S1', width: 'w-24 min-w-[90px]', special: true },
-               { key: 'kills25s2', label: 'Abates 25 S2', width: 'w-24 min-w-[90px]', special: true }
-            );
+         if (show24S2) {
+            cols.push({ key: 'kills24s2', label: 'Abates 24 S2', width: 'w-24 min-w-[90px]', special: true });
+         }
+         if (show25S1) {
+            cols.push({ key: 'kills25s1', label: 'Abates 25 S1', width: 'w-24 min-w-[90px]', special: true });
+         }
+         if (show25S2) {
+             cols.push({ key: 'kills25s2', label: 'Abates 25 S2', width: 'w-24 min-w-[90px]', special: true });
          }
 
          // Add remaining detailed columns
@@ -143,7 +150,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, onPlay
     }
 
     return cols;
-  }, [isKills, isFFWS, isAdmin, subTab]);
+  }, [isKills, isFFWS, isAdmin, subTab, splitFilter]);
 
   const sortedAndFilteredData = useMemo(() => {
     let output = [...processedData];
@@ -222,7 +229,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, onPlay
   const viewKey = `${type}-${sortConfig.key}-${sortConfig.direction}-${filter}-${seasonFilter}`;
 
   return (
-    <div className={`glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[800px] ring-1 ring-white/5 ${glowColor}`}>
+    <div className={`glass-panel rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] md:h-[600px] lg:h-[800px] ring-1 ring-white/5 ${glowColor}`}>
       {/* Table Toolbar */}
       <div className="p-5 border-b border-white/5 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-black/20 z-20">
         <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">

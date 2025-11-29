@@ -5,10 +5,11 @@ import { DataTable } from './components/DataTable';
 import { StatsPanel } from './components/StatsPanel';
 import { PlayerProgressionModal } from './components/PlayerProgressionModal';
 import { ComparisonModal } from './components/ComparisonModal';
+import { PlayerProfileView } from './components/PlayerProfileView';
 import { EntryScreen } from './components/EntryScreen';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
-import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter } from 'lucide-react';
+import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User } from 'lucide-react';
 
 // New Split CSV Links
 const WB_2024_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYc8m8JZnDeFr3FeN97I4NJwwuc0P1uN8v6JEv06_OflL5QCr_4t75yOe-xkqC9TnS3Cf-tRLT4aDZ/pub?output=csv';
@@ -16,7 +17,7 @@ const WB_2024_S2_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNiiD9B
 const WB_2025_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuAwNL2Ua0wcDHioiHDxxdNajprbptsOm1UdUNo4EoK-XyVzFYPrVYT_3WjMt2xZykLlaDh93L7TkR/pub?output=csv';
 const WB_2025_S2_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRoO1Pp7JVxMOkf29n3_A4LYISkXrkqglqsL9ajgw68igKnk_7TtUXaLFJuJZ4whzaRpWD2akh8YeK9/pub?output=csv';
 
-export type WBSubTab = 'wb2024' | 'wb2025' | 'general';
+export type WBSubTab = 'wb2024' | 'wb2025' | 'general' | 'profile';
 export type SplitFilter = 'all' | 's1' | 's2' | 'wb24s1' | 'wb24s2' | 'wb25s1' | 'wb25s2';
 
 const App: React.FC = () => {
@@ -142,7 +143,8 @@ const App: React.FC = () => {
       let datasets: KillStat[][] = [];
 
       // Determine datasets based on active tab AND split filter
-      if (wbSubTab === 'general') {
+      // For 'profile' tab, we want all data available to search
+      if (wbSubTab === 'general' || wbSubTab === 'profile') {
           if (splitFilter === 'all') datasets = [raw24s1, raw24s2, raw25s1, raw25s2];
           else if (splitFilter === 'wb24s1') datasets = [raw24s1];
           else if (splitFilter === 'wb24s2') datasets = [raw24s2];
@@ -280,9 +282,22 @@ const App: React.FC = () => {
     <>
       {showEntry && <EntryScreen onEnter={() => setShowEntry(false)} />}
       
-      <div className={`min-h-screen text-slate-200 selection:bg-indigo-500/30 flex flex-col relative overflow-x-hidden transition-opacity duration-700 ${showEntry ? 'opacity-0' : 'opacity-100'}`}>
+      {/* Dedicated Fixed Background to prevent Scroll Performance issues on Mobile */}
+      <div 
+        className="fixed inset-0 -z-50 pointer-events-none"
+        style={{
+          backgroundColor: '#000000',
+          backgroundImage: `
+            radial-gradient(circle at 50% 0%, #1e1b4b 0%, transparent 40%),
+            radial-gradient(circle at 0% 50%, #172554 0%, transparent 25%),
+            radial-gradient(circle at 100% 50%, #312e81 0%, transparent 25%)
+          `
+        }}
+      />
+      
+      <div className={`min-h-screen text-slate-200 selection:bg-indigo-500/30 flex flex-col relative transition-opacity duration-700 ${showEntry ? 'opacity-0' : 'opacity-100'}`}>
         
-        {/* Background ambient light */}
+        {/* Background ambient light overlay */}
         <div className="fixed top-0 left-0 w-full h-[500px] bg-gradient-to-b from-indigo-900/20 to-transparent pointer-events-none z-0" />
 
         {/* Navigation Bar */}
@@ -497,33 +512,42 @@ const App: React.FC = () => {
                     >
                         <Calendar className="w-4 h-4" /> WB 2025 DADOS GERAIS
                     </button>
+                    <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
+                    <button
+                        onClick={() => setWbSubTab('profile')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'profile' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/25 ring-1 ring-amber-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        <User className="w-4 h-4" /> PERFIL DO JOGADOR
+                    </button>
                 </div>
 
-                {/* Split Filters */}
-                <div className="flex items-center gap-2 px-4 py-3 bg-white/5 rounded-xl border border-white/5 w-fit">
-                    <Filter className="w-4 h-4 text-slate-500 mr-2" />
-                    
-                    <FilterButton label="Todos" active={splitFilter === 'all'} onClick={() => setSplitFilter('all')} />
+                {/* Split Filters (Hide in Profile mode) */}
+                {wbSubTab !== 'profile' && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-white/5 rounded-xl border border-white/5 w-fit">
+                      <Filter className="w-4 h-4 text-slate-500 mr-2" />
+                      
+                      <FilterButton label="Todos" active={splitFilter === 'all'} onClick={() => setSplitFilter('all')} />
 
-                    {wbSubTab === 'general' && (
-                        <>
-                           <div className="w-px h-4 bg-white/10 mx-1"></div>
-                           <FilterButton label="24 Split 1" active={splitFilter === 'wb24s1'} onClick={() => setSplitFilter('wb24s1')} />
-                           <FilterButton label="24 Split 2" active={splitFilter === 'wb24s2'} onClick={() => setSplitFilter('wb24s2')} />
-                           <div className="w-px h-4 bg-white/10 mx-1"></div>
-                           <FilterButton label="25 Split 1" active={splitFilter === 'wb25s1'} onClick={() => setSplitFilter('wb25s1')} />
-                           <FilterButton label="25 Split 2" active={splitFilter === 'wb25s2'} onClick={() => setSplitFilter('wb25s2')} />
-                        </>
-                    )}
+                      {wbSubTab === 'general' && (
+                          <>
+                            <div className="w-px h-4 bg-white/10 mx-1"></div>
+                            <FilterButton label="24 Split 1" active={splitFilter === 'wb24s1'} onClick={() => setSplitFilter('wb24s1')} />
+                            <FilterButton label="24 Split 2" active={splitFilter === 'wb24s2'} onClick={() => setSplitFilter('wb24s2')} />
+                            <div className="w-px h-4 bg-white/10 mx-1"></div>
+                            <FilterButton label="25 Split 1" active={splitFilter === 'wb25s1'} onClick={() => setSplitFilter('wb25s1')} />
+                            <FilterButton label="25 Split 2" active={splitFilter === 'wb25s2'} onClick={() => setSplitFilter('wb25s2')} />
+                          </>
+                      )}
 
-                    {(wbSubTab === 'wb2024' || wbSubTab === 'wb2025') && (
-                         <>
-                           <div className="w-px h-4 bg-white/10 mx-1"></div>
-                           <FilterButton label="Split 1" active={splitFilter === 's1'} onClick={() => setSplitFilter('s1')} />
-                           <FilterButton label="Split 2" active={splitFilter === 's2'} onClick={() => setSplitFilter('s2')} />
-                        </>
-                    )}
-                </div>
+                      {(wbSubTab === 'wb2024' || wbSubTab === 'wb2025') && (
+                          <>
+                            <div className="w-px h-4 bg-white/10 mx-1"></div>
+                            <FilterButton label="Split 1" active={splitFilter === 's1'} onClick={() => setSplitFilter('s1')} />
+                            <FilterButton label="Split 2" active={splitFilter === 's2'} onClick={() => setSplitFilter('s2')} />
+                          </>
+                      )}
+                  </div>
+                )}
             </div>
           )}
 
@@ -538,24 +562,34 @@ const App: React.FC = () => {
                       </div>
                   </div>
               ) : (
-                  <DataTable 
-                    key={`${activeTab}-${wbSubTab}-${splitFilter}`} // Force remount on subtab/filter change
-                    type={activeTab}
-                    subTab={wbSubTab} // Pass subtab to handle columns
-                    data={getCurrentData()}
-                    onPlayerClick={handlePlayerClick}
-                    isAdmin={isAdmin}
-                    onEditPlayer={setPlayerToEdit}
-                  />
+                  <>
+                    {/* Render Profile View if selected subtab is profile */}
+                    {activeTab === 'ffwsbr' && wbSubTab === 'profile' ? (
+                       <PlayerProfileView players={mergedFFWSData} />
+                    ) : (
+                       <DataTable 
+                          key={`${activeTab}-${wbSubTab}-${splitFilter}`} 
+                          type={activeTab}
+                          subTab={wbSubTab === 'profile' ? 'general' : wbSubTab}
+                          splitFilter={splitFilter}
+                          data={getCurrentData()}
+                          onPlayerClick={handlePlayerClick}
+                          isAdmin={isAdmin}
+                          onEditPlayer={setPlayerToEdit}
+                        />
+                    )}
+                  </>
               )}
             </div>
 
-            {/* Sidebar */}
-            <StatsPanel 
-              killsData={activeTab === 'ffwsbr' ? mergedFFWSData : killStats} 
-              earningsData={EARNING_STATS} 
-              activeTab={activeTab}
-            />
+            {/* Sidebar (Hide in Profile View to give full width) */}
+            {(activeTab !== 'ffwsbr' || wbSubTab !== 'profile') && (
+              <StatsPanel 
+                killsData={activeTab === 'ffwsbr' ? mergedFFWSData : killStats} 
+                earningsData={EARNING_STATS} 
+                activeTab={activeTab}
+              />
+            )}
           </div>
         </main>
 
@@ -592,7 +626,7 @@ const App: React.FC = () => {
           isOpen={isComparisonOpen}
           onClose={() => setIsComparisonOpen(false)}
           players={activeTab === 'ffwsbr' ? mergedFFWSData : killStats}
-          activeWbTab={wbSubTab} // Pass the context of the current WB view
+          activeWbTab={wbSubTab === 'profile' ? 'general' : wbSubTab} 
         />
 
         {/* Admin Login Modal */}
