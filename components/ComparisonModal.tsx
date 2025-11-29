@@ -8,7 +8,9 @@ import {
   Search,
   Printer,
   FileText,
-  Filter
+  Filter,
+  User,
+  Medal
 } from 'lucide-react';
 import { KillStat } from '../types';
 
@@ -25,6 +27,7 @@ interface ComparisonRowProps {
   p2Data: any;
   type?: 'header' | 'normal' | 'season';
   winner?: 0 | 1 | 2; // 0 = empate, 1 = p1, 2 = p2
+  maxValue?: number; // Para cálculo da barra de progresso
 }
 
 // Internal Component: Searchable Dropdown
@@ -62,13 +65,16 @@ const SearchablePlayerSelect = ({
   return (
     <div className="relative w-full" ref={wrapperRef}>
       <div 
-        className="w-full bg-black/50 border border-white/10 rounded-xl p-2 flex items-center cursor-pointer hover:border-white/20 transition-colors"
+        className={`w-full bg-black/50 border border-white/10 rounded-xl p-3 flex items-center cursor-pointer hover:border-white/20 transition-all group ${align === 'right' ? 'flex-row-reverse' : ''}`}
         onClick={() => setOpen(!open)}
       >
-        <span className={`flex-1 font-bold text-sm md:text-lg truncate ${value ? 'text-white' : 'text-slate-500'} ${align === 'right' ? 'text-right pr-2' : 'text-left pl-2'}`}>
+        <div className={`w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-hover:bg-indigo-500/30 transition-colors ${align === 'right' ? 'ml-3' : 'mr-3'}`}>
+           <User className="w-4 h-4 text-indigo-300" />
+        </div>
+        <span className={`flex-1 font-bold text-sm md:text-base truncate ${value ? 'text-white' : 'text-slate-500'} ${align === 'right' ? 'text-right' : 'text-left'}`}>
           {value || placeholder}
         </span>
-        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? 'rotate-180' : ''} ${align === 'right' ? 'mr-auto ml-0' : 'ml-auto'}`} />
       </div>
 
       {open && (
@@ -110,60 +116,92 @@ const SearchablePlayerSelect = ({
   );
 };
 
-const ComparisonRow: React.FC<ComparisonRowProps> = ({ label, p1Data, p2Data, type = 'normal', winner = 0 }) => {
+const ComparisonRow: React.FC<ComparisonRowProps> = ({ label, p1Data, p2Data, type = 'normal', winner = 0, maxValue }) => {
   const isSeason = type === 'season';
   
+  // Ensure numeric values for bar calculation
+  let val1 = 0, val2 = 0;
+  if (isSeason) {
+      val1 = p1Data?.kills || 0;
+      val2 = p2Data?.kills || 0;
+  } else if (typeof p1Data === 'number') {
+      val1 = p1Data;
+      val2 = p2Data;
+  } else if (typeof p1Data === 'string') {
+      // Try to parse if it looks like a number
+      val1 = parseFloat(p1Data) || 0;
+      val2 = parseFloat(p2Data) || 0;
+  }
+
+  // Calculate width percentages relative to the max value of the two (or global max)
+  const localMax = maxValue || Math.max(val1, val2) || 1;
+  const p1Width = Math.min(100, (val1 / localMax) * 100);
+  const p2Width = Math.min(100, (val2 / localMax) * 100);
+
   const p1Win = winner === 1;
   const p2Win = winner === 2;
 
   const p1Color = p1Win ? 'text-amber-400' : 'text-slate-400';
-  const p2Color = p2Win ? 'text-cyan-400' : 'text-slate-400';
-  const p1Bg = p1Win ? 'bg-amber-500/5' : 'bg-transparent';
-  const p2Bg = p2Win ? 'bg-cyan-500/5' : 'bg-transparent';
+  const p2Color = p2Win ? 'text-indigo-400' : 'text-slate-400';
+  const p1BarColor = p1Win ? 'bg-amber-500' : 'bg-slate-700';
+  const p2BarColor = p2Win ? 'bg-indigo-500' : 'bg-slate-700';
 
   return (
-    <div className="flex items-stretch min-h-[60px] border-b border-white/5 last:border-0 group hover:bg-white/[0.02] transition-colors">
-      {/* Player 1 Side */}
-      <div className={`flex-1 flex flex-col justify-center items-end pr-6 py-3 border-r border-white/5 relative ${p1Bg} transition-colors`}>
-         {isSeason ? (
-             p1Data ? (
-               <>
-                 <span className={`text-xl font-mono font-bold leading-none ${p1Color}`}>{p1Data.kills}</span>
-                 <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-slate-500 font-medium bg-black/40 px-1.5 rounded">{p1Data.matches}J</span>
-                    <span className={`text-[11px] font-mono ${p1Win ? 'text-amber-500/80' : 'text-slate-500'}`}>{p1Data.avg} Ø</span>
-                 </div>
-               </>
-             ) : <Minus className="w-4 h-4 text-slate-700" />
-         ) : (
-             <span className={`text-lg font-mono font-bold ${p1Color}`}>{p1Data}</span>
-         )}
-         {p1Win && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-full bg-gradient-to-l from-amber-500/20 to-transparent"></div>}
-         {p1Win && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-8 bg-amber-500 rounded-l"></div>}
+    <div className="relative grid grid-cols-[1fr_auto_1fr] gap-4 items-center py-3 px-2 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors group">
+      
+      {/* Player 1 (Left) */}
+      <div className="relative flex flex-col items-end justify-center h-full">
+         <div className="flex items-center gap-2 mb-1 z-10 relative">
+             {isSeason ? (
+                 p1Data ? (
+                   <>
+                      <span className={`text-[10px] text-slate-500 font-medium bg-black/40 px-1.5 rounded hidden sm:inline-block`}>{p1Data.matches}J</span>
+                      <span className={`font-mono text-xs opacity-70 ${p1Win ? 'text-amber-500' : 'text-slate-500'}`}>{p1Data.avg} Ø</span>
+                      <span className={`text-lg font-mono font-bold leading-none ${p1Color}`}>{p1Data.kills}</span>
+                   </>
+                 ) : <Minus className="w-4 h-4 text-slate-700" />
+             ) : (
+                 <span className={`text-base md:text-lg font-mono font-bold ${p1Color}`}>{p1Data}</span>
+             )}
+         </div>
+         {/* Bar Background */}
+         <div className="w-full h-1.5 bg-slate-800/50 rounded-full overflow-hidden flex justify-end">
+            <div 
+                className={`h-full rounded-full transition-all duration-700 ease-out ${p1BarColor} ${p1Win ? 'opacity-100 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'opacity-40'}`} 
+                style={{ width: `${p1Width}%` }} 
+            />
+         </div>
       </div>
 
-      {/* Center Label */}
-      <div className="w-32 md:w-40 flex flex-col justify-center items-center px-2 py-2 bg-black/20 shrink-0">
-         <span className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest text-center leading-tight">{label}</span>
+      {/* Label (Center) */}
+      <div className="w-24 md:w-32 flex justify-center">
+         <div className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest text-center whitespace-nowrap">
+            {label}
+         </div>
       </div>
 
-      {/* Player 2 Side */}
-      <div className={`flex-1 flex flex-col justify-center items-start pl-6 py-3 border-l border-white/5 relative ${p2Bg} transition-colors`}>
-         {isSeason ? (
-             p2Data ? (
-               <>
-                 <span className={`text-xl font-mono font-bold leading-none ${p2Color}`}>{p2Data.kills}</span>
-                 <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-[11px] font-mono ${p2Win ? 'text-cyan-500/80' : 'text-slate-500'}`}>{p2Data.avg} Ø</span>
-                    <span className="text-[10px] text-slate-500 font-medium bg-black/40 px-1.5 rounded">{p2Data.matches}J</span>
-                 </div>
-               </>
-             ) : <Minus className="w-4 h-4 text-slate-700" />
-         ) : (
-             <span className={`text-lg font-mono font-bold ${p2Color}`}>{p2Data}</span>
-         )}
-         {p2Win && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-full bg-gradient-to-r from-cyan-500/20 to-transparent"></div>}
-         {p2Win && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-8 bg-cyan-500 rounded-r"></div>}
+      {/* Player 2 (Right) */}
+      <div className="relative flex flex-col items-start justify-center h-full">
+         <div className="flex items-center gap-2 mb-1 z-10 relative">
+             {isSeason ? (
+                 p2Data ? (
+                   <>
+                      <span className={`text-lg font-mono font-bold leading-none ${p2Color}`}>{p2Data.kills}</span>
+                      <span className={`font-mono text-xs opacity-70 ${p2Win ? 'text-indigo-500' : 'text-slate-500'}`}>{p2Data.avg} Ø</span>
+                      <span className={`text-[10px] text-slate-500 font-medium bg-black/40 px-1.5 rounded hidden sm:inline-block`}>{p2Data.matches}J</span>
+                   </>
+                 ) : <Minus className="w-4 h-4 text-slate-700" />
+             ) : (
+                 <span className={`text-base md:text-lg font-mono font-bold ${p2Color}`}>{p2Data}</span>
+             )}
+         </div>
+         {/* Bar Background */}
+         <div className="w-full h-1.5 bg-slate-800/50 rounded-full overflow-hidden flex justify-start">
+            <div 
+                className={`h-full rounded-full transition-all duration-700 ease-out ${p2BarColor} ${p2Win ? 'opacity-100 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'opacity-40'}`} 
+                style={{ width: `${p2Width}%` }} 
+            />
+         </div>
       </div>
     </div>
   );
@@ -273,26 +311,27 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
           label: "Ranking Geral",
           p1Data: `#${player1?.rank}`,
           p2Data: `#${player2?.rank}`,
-          winner: checkWinner(player1?.rank || 9999, player2?.rank || 9999, true)
+          winner: checkWinner(player1?.rank || 9999, player2?.rank || 9999, true),
+          // For ranking, lower is better, so inverse logic for max value calc not needed visually as it's just text
       },
       {
-          label: "Total Abates (Filtrado)",
+          label: "Total Abates",
           p1Data: p1Stats.kills,
           p2Data: p2Stats.kills,
           winner: checkWinner(p1Stats.kills, p2Stats.kills)
-      },
-      {
-          label: "Partidas (Filtrado)",
-          p1Data: p1Stats.matches,
-          p2Data: p2Stats.matches,
-          winner: checkWinner(p1Stats.matches, p2Stats.matches)
       },
       {
           label: "Média (KPG)",
           p1Data: p1Stats.kpg.toFixed(2),
           p2Data: p2Stats.kpg.toFixed(2),
           winner: checkWinner(p1Stats.kpg, p2Stats.kpg)
-      }
+      },
+      {
+          label: "Partidas",
+          p1Data: p1Stats.matches,
+          p2Data: p2Stats.matches,
+          winner: checkWinner(p1Stats.matches, p2Stats.matches)
+      },
   ];
 
   // Optional Split Rows (only if filter is All)
@@ -318,9 +357,9 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
 
   // Detailed Stats
   const detailedKeys: {k: keyof KillStat, l: string}[] = [
-      { k: 'headshots', l: 'Capas (Total)' },
-      { k: 'knockdowns', l: 'Derrubados (Total)' },
-      { k: 'gloowalls', l: 'Gelos (Total)' }
+      { k: 'headshots', l: 'Capas' },
+      { k: 'knockdowns', l: 'Derrubados' },
+      { k: 'gloowalls', l: 'Gelos' }
   ];
 
   detailedKeys.forEach(({k, l}) => {
@@ -386,8 +425,6 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
   });
 
 
-  // Logic to determine if specific split columns should be shown (Only in 'All' mode) - handled via rows generation logic above.
-
   // Render Filter Buttons
   const renderFilterButtons = () => {
       if (!activeWbTab) return null;
@@ -395,29 +432,29 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
       const FilterBtn = ({ val, label }: { val: string, label: string }) => (
           <button 
              onClick={() => setComparisonFilter(val)}
-             className={`px-2 py-1 text-[10px] uppercase font-bold rounded border ${comparisonFilter === val ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50' : 'bg-black/20 text-slate-500 border-white/5'}`}
+             className={`px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${comparisonFilter === val ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]' : 'bg-black/20 text-slate-500 border-white/5 hover:border-white/10 hover:text-white'}`}
           >
               {label}
           </button>
       );
 
       return (
-          <div className="flex items-center gap-2 justify-center mt-4 p-2 bg-white/5 rounded-lg border border-white/5 w-fit mx-auto">
-             <Filter className="w-3 h-3 text-slate-500" />
-             <FilterBtn val="all" label="Todos" />
+          <div className="flex items-center gap-2 justify-center mt-6 p-1.5 bg-black/40 rounded-xl border border-white/5 w-fit mx-auto backdrop-blur-sm">
+             <Filter className="w-3.5 h-3.5 text-slate-500 ml-2" />
+             <FilterBtn val="all" label="Geral" />
              {activeWbTab === 'general' && (
                  <>
-                    <div className="w-px h-3 bg-white/10" />
+                    <div className="w-px h-4 bg-white/10" />
                     <FilterBtn val="wb24s1" label="24 S1" />
                     <FilterBtn val="wb24s2" label="24 S2" />
-                    <div className="w-px h-3 bg-white/10" />
+                    <div className="w-px h-4 bg-white/10" />
                     <FilterBtn val="wb25s1" label="25 S1" />
                     <FilterBtn val="wb25s2" label="25 S2" />
                  </>
              )}
              {(activeWbTab === 'wb2024' || activeWbTab === 'wb2025') && (
                  <>
-                    <div className="w-px h-3 bg-white/10" />
+                    <div className="w-px h-4 bg-white/10" />
                     <FilterBtn val="s1" label="Split 1" />
                     <FilterBtn val="s2" label="Split 2" />
                  </>
@@ -426,104 +463,135 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
       );
   };
 
+  const getInitials = (name: string) => name ? name.substring(0, 2).toUpperCase() : '??';
+
   return (
     <div 
       className={`fixed inset-0 z-[100] flex items-center justify-center ${isReportMode ? 'bg-black' : 'p-4'}`}
       id="comparison-report"
     >
       {!isReportMode && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm transition-opacity" onClick={onClose} />
       )}
       
-      <div className={`relative bg-[#0B0F19] border border-white/10 shadow-2xl w-full flex flex-col overflow-hidden ring-1 ring-white/5 transition-all duration-300 ${isReportMode ? 'h-full w-full rounded-none border-0' : 'max-w-4xl max-h-[90vh] rounded-3xl'}`}>
+      <div className={`relative bg-[#0B0F19] border border-white/10 shadow-2xl w-full flex flex-col overflow-hidden ring-1 ring-white/5 transition-all duration-300 ${isReportMode ? 'h-full w-full rounded-none border-0' : 'max-w-5xl max-h-[95vh] rounded-3xl'}`}>
         
-        {/* Header / Selectors */}
-        <div className="p-6 border-b border-white/5 bg-gradient-to-b from-[#111827] to-[#0B0F19] shrink-0 z-20">
-          <div className="flex justify-between items-center mb-6 no-print">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-               <Swords className="w-5 h-5 text-indigo-500" /> Comparativo Direto
-            </h2>
-            <div className="flex items-center gap-2">
+        {/* Top Actions Bar */}
+        <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-50 pointer-events-none">
+            <div className="pointer-events-auto flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 bg-black/50 px-3 py-1 rounded-full border border-white/5">
+                    {activeWbTab ? 'Modo FFWS' : 'Modo Geral'}
+                </span>
+            </div>
+            <div className="pointer-events-auto flex items-center gap-2 bg-black/50 p-1.5 rounded-full border border-white/5 backdrop-blur-md">
                 <button 
                     onClick={() => setIsReportMode(!isReportMode)} 
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${isReportMode ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                    className={`p-2 rounded-full transition-colors ${isReportMode ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-slate-400 hover:text-white'}`}
+                    title={isReportMode ? "Sair do modo relatório" : "Gerar Relatório"}
                 >
-                    <FileText className="w-4 h-4" /> {isReportMode ? 'Voltar' : 'Gerar Relatório'}
+                    <FileText className="w-4 h-4" />
                 </button>
                 {isReportMode && (
                     <button 
                         onClick={handlePrint}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-white text-black hover:bg-slate-200 transition-colors"
+                        className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
                     >
-                        <Printer className="w-4 h-4" /> Imprimir
+                        <Printer className="w-4 h-4" />
                     </button>
                 )}
                 {!isReportMode && (
-                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors">
-                    <X className="w-5 h-5" />
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors">
+                        <X className="w-4 h-4" />
                     </button>
                 )}
             </div>
-          </div>
+        </div>
 
-          <div className="flex items-center justify-between gap-4 md:gap-12">
-            {/* Player 1 Select */}
-            <div className="flex-1 relative">
-                {isReportMode ? (
-                    <div className="text-center md:text-left">
-                        <div className="text-3xl font-black text-amber-500 font-mono tracking-tighter">{player1Id}</div>
+        {/* Header / Players Select */}
+        <div className="pt-20 pb-8 px-6 md:px-12 bg-gradient-to-b from-[#111827] to-[#0B0F19] shrink-0 border-b border-white/5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-12">
+            
+            {/* Player 1 Block */}
+            <div className="flex-1 w-full flex flex-col items-center md:items-start relative group">
+                <div className="absolute -inset-4 bg-amber-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                <div className="relative flex items-center gap-4 mb-3 w-full">
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/20 flex items-center justify-center text-black font-black text-2xl md:text-3xl border border-white/10 shrink-0 transform -rotate-3 group-hover:rotate-0 transition-transform">
+                        {getInitials(player1Id)}
                     </div>
-                ) : (
-                    <div className="group">
-                        <div className="relative bg-black border border-amber-500/30 rounded-xl p-1 flex items-center shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                    <div className="flex-1 min-w-0">
+                         {isReportMode ? (
+                            <h2 className="text-3xl font-black text-white truncate">{player1Id}</h2>
+                         ) : (
                             <SearchablePlayerSelect 
                                 value={player1Id} 
                                 onChange={setPlayer1Id} 
                                 players={players} 
-                                placeholder="Selecione Jogador 1"
+                                placeholder="Jogador 1"
                             />
-                        </div>
+                         )}
+                         <div className="flex items-center gap-2 mt-1">
+                            <div className="px-2 py-0.5 bg-amber-500/10 rounded border border-amber-500/20 text-[10px] font-bold text-amber-400 uppercase tracking-wide">
+                                P1
+                            </div>
+                            {player1 && <span className="text-xs text-slate-400">{player1.team || 'Sem Time'}</span>}
+                         </div>
                     </div>
-                )}
-                <div className="text-center md:text-left mt-2 px-2 flex flex-col">
-                   <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Jogador 01</div>
-                   {/* Score for P1 */}
-                   <div className="text-xs font-bold text-amber-500 mt-1 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" /> Vence em {p1Score} categorias
-                   </div>
+                </div>
+                
+                {/* Score P1 */}
+                <div className="w-full bg-black/40 rounded-xl p-3 border border-white/5 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Categorias</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl font-black text-white">{p1Score}</span>
+                        {p1Score > p2Score && <Medal className="w-5 h-5 text-amber-400 fill-current animate-pulse" />}
+                    </div>
                 </div>
             </div>
 
-            {/* VS Badge */}
-            <div className="shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-black border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)] z-10">
-               <span className="font-black italic text-slate-600 text-sm">VS</span>
+            {/* VS Center */}
+            <div className="shrink-0 flex flex-col items-center justify-center">
+               <div className="w-px h-12 bg-gradient-to-b from-transparent via-white/20 to-transparent hidden md:block mb-2"></div>
+               <div className="w-14 h-14 rounded-full bg-black border-2 border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.05)] z-10">
+                   <Swords className="w-6 h-6 text-slate-400" />
+               </div>
+               <div className="w-px h-12 bg-gradient-to-t from-transparent via-white/20 to-transparent hidden md:block mt-2"></div>
             </div>
 
-            {/* Player 2 Select */}
-            <div className="flex-1 relative">
-                {isReportMode ? (
-                    <div className="text-center md:text-right">
-                        <div className="text-3xl font-black text-cyan-400 font-mono tracking-tighter">{player2Id}</div>
+            {/* Player 2 Block */}
+            <div className="flex-1 w-full flex flex-col items-center md:items-end relative group">
+                <div className="absolute -inset-4 bg-indigo-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                <div className="relative flex flex-row-reverse items-center gap-4 mb-3 w-full">
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20 flex items-center justify-center text-white font-black text-2xl md:text-3xl border border-white/10 shrink-0 transform rotate-3 group-hover:rotate-0 transition-transform">
+                        {getInitials(player2Id)}
                     </div>
-                ) : (
-                    <div className="group">
-                        <div className="relative bg-black border border-cyan-500/30 rounded-xl p-1 flex items-center shadow-[0_0_15px_rgba(34,211,238,0.1)]">
+                    <div className="flex-1 min-w-0 text-right flex flex-col items-end">
+                         {isReportMode ? (
+                            <h2 className="text-3xl font-black text-white truncate">{player2Id}</h2>
+                         ) : (
                             <SearchablePlayerSelect 
                                 value={player2Id} 
                                 onChange={setPlayer2Id} 
                                 players={players} 
-                                placeholder="Selecione Jogador 2"
+                                placeholder="Jogador 2"
                                 align="right"
                             />
-                        </div>
+                         )}
+                         <div className="flex items-center gap-2 mt-1">
+                            {player2 && <span className="text-xs text-slate-400">{player2.team || 'Sem Time'}</span>}
+                            <div className="px-2 py-0.5 bg-indigo-500/10 rounded border border-indigo-500/20 text-[10px] font-bold text-indigo-400 uppercase tracking-wide">
+                                P2
+                            </div>
+                         </div>
                     </div>
-                )}
-                 <div className="text-center md:text-right mt-2 px-2 flex flex-col items-end">
-                   <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Jogador 02</div>
-                   {/* Score for P2 */}
-                   <div className="text-xs font-bold text-cyan-400 mt-1 flex items-center gap-1">
-                      Vence em {p2Score} categorias <TrendingUp className="w-3 h-3" /> 
-                   </div>
+                </div>
+
+                {/* Score P2 */}
+                <div className="w-full bg-black/40 rounded-xl p-3 border border-white/5 flex items-center justify-between flex-row-reverse">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Categorias</span>
+                    <div className="flex items-center gap-2">
+                         {p2Score > p1Score && <Medal className="w-5 h-5 text-indigo-400 fill-current animate-pulse" />}
+                        <span className="text-2xl font-black text-white">{p2Score}</span>
+                    </div>
                 </div>
             </div>
           </div>
@@ -534,16 +602,11 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Scrollable Content */}
-        <div className={`custom-scrollbar bg-[#0B0F19] relative ${isReportMode ? 'overflow-visible h-auto' : 'overflow-y-auto'}`}>
+        <div className={`custom-scrollbar bg-[#0B0F19] relative px-4 md:px-12 py-8 flex-1 ${isReportMode ? 'overflow-visible h-auto' : 'overflow-y-auto'}`}>
            
-           {/* Legend Header */}
-           <div className="sticky top-0 z-10 bg-[#0B0F19]/95 backdrop-blur-sm border-b border-white/5 py-2 px-4 flex justify-center text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-               <span>Dados Oficiais: {player1?.events || 'Comparação'}</span>
-           </div>
-
            {/* General Stats Rows */}
            {player1 && player2 && (
-             <div className="mb-4">
+             <div className="space-y-1 mb-12">
                  {rows.map((row, idx) => (
                      <ComparisonRow
                         key={idx}
@@ -557,13 +620,17 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
            )}
 
            {/* Seasons Header */}
-           <div className="sticky top-0 z-10 bg-indigo-950/30 backdrop-blur-md border-y border-indigo-500/20 py-3 px-4 flex justify-center items-center gap-2 text-xs text-indigo-300 font-bold uppercase tracking-widest print:bg-slate-200 print:text-black">
-               <TrendingUp className="w-4 h-4" /> Histórico LBFF (Legado)
+           <div className="flex items-center gap-4 mb-6">
+               <div className="h-px bg-white/10 flex-1"></div>
+               <div className="text-xs text-slate-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                   <TrendingUp className="w-4 h-4" /> Histórico LBFF
+               </div>
+               <div className="h-px bg-white/10 flex-1"></div>
            </div>
 
            {/* Seasons List */}
            {player1 && player2 && (
-               <div className="pb-8">
+               <div className="pb-8 space-y-1">
                    {seasonRows.map((row, idx) => (
                        <ComparisonRow 
                          key={idx}
@@ -572,14 +639,15 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
                          p2Data={row!.p2Data} 
                          type="season"
                          winner={row!.winner as 0|1|2}
+                         maxValue={300} // Approximate max kills per season for bar scaling
                        />
                    ))}
                </div>
            )}
            
-           <div className="p-6 text-center">
+           <div className="p-6 text-center border-t border-white/5 mt-4">
               <p className="text-xs text-slate-600">
-                Comparação baseada em dados oficiais da Liquipedia. Ø = Média de abates por partida.
+                Comparação baseada em dados oficiais da Liquipedia & Tratamento JhanStats.
               </p>
               {isReportMode && (
                   <p className="text-[10px] text-slate-700 mt-2 font-mono uppercase">

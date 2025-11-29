@@ -77,6 +77,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, onPlay
             { key: 'player', label: 'Jogador', width: 'w-48 min-w-[150px]', sticky: true },
             { key: 'totalKills', label: 'Total Abates', width: 'w-24 min-w-[80px]', highlight: true },
             { key: 'matches', label: 'Quedas', width: 'w-24 min-w-[80px]' },
+            { key: 'kpg', label: 'Média', width: 'w-24 min-w-[80px]' }, // Added Average Column
          ];
 
          // Inject Split specific columns based on active subtab
@@ -324,6 +325,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, onPlay
                   const isMedal = ['gold', 'silver', 'bronze', 's_tier'].includes(col.key as string);
                   const isAction = col.key === 'actions';
                   const isSpecial = (col as any).special;
+                  const isAverage = col.key === 'kpg';
 
                   return (
                     <td 
@@ -370,10 +372,10 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, onPlay
                          <div className={`font-mono font-bold text-center ${val > 0 ? 'text-white' : 'text-slate-700'}`}>
                             {val}
                          </div>
+                      ) : isAverage ? (
+                         <span className={`font-mono px-2 py-1 rounded text-xs font-bold ${Number(val) > 2 ? 'bg-amber-500/20 text-amber-400' : Number(val) > 1.5 ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-slate-400'}`}>{val}</span>
                       ) : (
-                        col.key === 'kpg' 
-                        ? <span className="font-mono bg-white/5 border border-white/10 px-2 py-1 rounded text-xs text-slate-400">{val}</span> 
-                        : (val !== undefined ? val : <span className="text-slate-700 text-xs">-</span>)
+                        val !== undefined ? val : <span className="text-slate-700 text-xs">-</span>
                       )}
                     </td>
                   );

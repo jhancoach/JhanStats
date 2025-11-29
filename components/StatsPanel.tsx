@@ -118,12 +118,17 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData,
          </h3>
          {activeTab === 'kills' && (
            <p className="text-xs text-slate-400/80 mb-6 pl-1 border-l-2 border-indigo-500/50">
-             Ranking <span className="text-white font-semibold">Era WB</span> (2024-2025). <br/>Jogadores ativos no cenário internacional.
+             Ranking via <span className="text-white font-semibold">Liquipedia</span>. <br/>Jogadores ativos no cenário internacional (Era WB).
            </p>
          )}
          {activeTab === 'ffwsbr' && (
            <p className="text-xs text-slate-400/80 mb-6 pl-1 border-l-2 border-indigo-500/50">
-             Dados oficiais do FFWS Brasil 2025. <br/>Tabela completa e atualizada.
+             Tratamento de dados <span className="text-indigo-400 font-semibold">Jhan</span>. <br/>Tabela completa FFWS Brasil 2025.
+           </p>
+         )}
+         {activeTab === 'earnings' && (
+           <p className="text-xs text-slate-400/80 mb-6 pl-1 border-l-2 border-indigo-500/50">
+             Ranking financeiro via <span className="text-white font-semibold">Liquipedia</span>. <br/>Valores acumulados em torneios oficiais.
            </p>
          )}
        </div>

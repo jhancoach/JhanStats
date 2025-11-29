@@ -568,7 +568,12 @@ const App: React.FC = () => {
                <div className="h-px w-12 bg-gradient-to-l from-transparent to-slate-500"></div>
              </div>
              <p className="text-slate-500 text-sm">
-               &copy; 2024 JhanStats. Dados fornecidos por Liquipedia.
+               &copy; 2024 JhanStats.
+               {activeTab === 'ffwsbr' ? (
+                  <> Dados tratados por <span className="text-slate-400 font-medium">Jhan</span>.</>
+               ) : (
+                  <> Dados fornecidos por <span className="text-slate-400 font-medium">Liquipedia</span>.</>
+               )}
              </p>
              <p className="text-slate-600 text-sm mt-2">
                Site Desenvolvido por <span className="text-indigo-400 font-medium hover:text-indigo-300 transition-colors cursor-default drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">Jhan Medeiros</span>
