@@ -21,6 +21,29 @@ const WB_2025_S2_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRoO1Pp7
 export type WBSubTab = 'wb2024' | 'wb2025' | 'general' | 'profile';
 export type SplitFilter = 'all' | 's1' | 's2' | 'wb24s1' | 'wb24s2' | 'wb25s1' | 'wb25s2';
 
+// Helper function for name normalization (Moved outside component for reuse)
+const normalizePlayerName = (name: string): string => {
+   const n = name.trim();
+   const lower = n.toLowerCase();
+   if (lower === 'nickz7') return 'Nickz7';
+   if (lower === 'but' || lower === 'butzin') return 'BuTziN';
+   if (lower === 'motovea' || lower === 'motovea7') return 'Motovea';
+   if (lower === 'rigby' || lower === 'rigby245') return 'Rigby245';
+   if (lower === 'lost' || lower === 'lost21') return 'Lost21';
+   if (lower === 'honey' || lower === 'honeyzl') return 'HoneyZL';
+   if (lower === 'pitbull') return 'Pitbull';
+   if (lower === 'bops') return 'Bops';
+   if (lower === 'bahiaz7') return 'BahiaZ7';
+   if (lower === 'nando9') return 'NANDO9';
+   if (lower === 'xtrap7' || lower === 'trap' || lower === 'trap7') return 'TRAP7';
+   if (lower === 'yago.exe' || lower === 'yago') return 'Yago';
+   if (lower === 'cauan7' || lower === 'cauan') return 'Cauan';
+   if (lower === 'italo7' || lower === 'italo') return 'ITALO$$';
+   if (lower === 'xguaxa7' || lower === 'guaxa' || lower === 'guaxa7') return 'GUAXA7';
+   if (lower === 'bombom7' || lower === 'bombom') return 'BOMBOM';
+   return n;
+};
+
 const App: React.FC = () => {
   const [showEntry, setShowEntry] = useState(true);
   const [activeTab, setActiveTab] = useState<'kills' | 'earnings' | 'ffwsbr' | 'standings'>('kills');
@@ -163,32 +186,9 @@ const App: React.FC = () => {
 
       const playerMap = new Map<string, KillStat>();
 
-      const normalizeName = (name: string): string => {
-         const n = name.trim();
-         const lower = n.toLowerCase();
-         // ... normalization rules same as before ...
-         if (lower === 'nickz7') return 'Nickz7';
-         if (lower === 'but' || lower === 'butzin') return 'BuTziN';
-         if (lower === 'motovea' || lower === 'motovea7') return 'Motovea';
-         if (lower === 'rigby' || lower === 'rigby245') return 'Rigby245';
-         if (lower === 'lost' || lower === 'lost21') return 'Lost21';
-         if (lower === 'honey' || lower === 'honeyzl') return 'HoneyZL';
-         if (lower === 'pitbull') return 'Pitbull';
-         if (lower === 'bops') return 'Bops';
-         if (lower === 'bahiaz7') return 'BahiaZ7';
-         if (lower === 'nando9') return 'NANDO9';
-         if (lower === 'xtrap7' || lower === 'trap' || lower === 'trap7') return 'TRAP7';
-         if (lower === 'yago.exe' || lower === 'yago') return 'Yago';
-         if (lower === 'cauan7' || lower === 'cauan') return 'Cauan';
-         if (lower === 'italo7' || lower === 'italo') return 'ITALO$$';
-         if (lower === 'xguaxa7' || lower === 'guaxa' || lower === 'guaxa7') return 'GUAXA7';
-         if (lower === 'bombom7' || lower === 'bombom') return 'BOMBOM';
-         return n;
-      };
-
       datasets.forEach(dataset => {
           dataset.forEach(p => {
-              const standardizedName = normalizeName(p.player);
+              const standardizedName = normalizePlayerName(p.player);
               const key = standardizedName.toLowerCase();
               
               if (!playerMap.has(key)) {
@@ -244,6 +244,135 @@ const App: React.FC = () => {
 
   }, [raw24s1, raw24s2, raw25s1, raw25s2, wbSubTab, splitFilter]);
 
+  // Specific Data for Standings View (WB 2024 S1 Players)
+  const wb2024S1Players = useMemo(() => {
+     const playerMap = new Map<string, KillStat>();
+     raw24s1.forEach(p => {
+        const standardizedName = normalizePlayerName(p.player);
+        const key = standardizedName.toLowerCase();
+        
+        if (!playerMap.has(key)) {
+            playerMap.set(key, { ...p, player: standardizedName });
+        } else {
+            const existing = playerMap.get(key)!;
+            // Merge logic (though raw24s1 should be unique, we merge just in case)
+            existing.totalKills += p.totalKills;
+            existing.matches += p.matches;
+            existing.headshots = (existing.headshots || 0) + (p.headshots || 0);
+            existing.knockdowns = (existing.knockdowns || 0) + (p.knockdowns || 0);
+            existing.gloowalls = (existing.gloowalls || 0) + (p.gloowalls || 0);
+            existing.gloowallsDestroyed = (existing.gloowallsDestroyed || 0) + (p.gloowallsDestroyed || 0);
+            existing.revives = (existing.revives || 0) + (p.revives || 0);
+            existing.alliesRevived = (existing.alliesRevived || 0) + (p.alliesRevived || 0);
+        }
+     });
+
+     return Array.from(playerMap.values())
+        .map(p => ({
+            ...p,
+            kpg: p.matches > 0 ? parseFloat((p.totalKills / p.matches).toFixed(2)) : 0,
+            events: 'WB 2024 S1'
+        }))
+        .sort((a, b) => b.totalKills - a.totalKills)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+  }, [raw24s1]);
+
+  // Specific Data for Standings View (WB 2024 S2 Players)
+  const wb2024S2Players = useMemo(() => {
+     const playerMap = new Map<string, KillStat>();
+     raw24s2.forEach(p => {
+        const standardizedName = normalizePlayerName(p.player);
+        const key = standardizedName.toLowerCase();
+        
+        if (!playerMap.has(key)) {
+            playerMap.set(key, { ...p, player: standardizedName });
+        } else {
+            const existing = playerMap.get(key)!;
+            existing.totalKills += p.totalKills;
+            existing.matches += p.matches;
+            existing.headshots = (existing.headshots || 0) + (p.headshots || 0);
+            existing.knockdowns = (existing.knockdowns || 0) + (p.knockdowns || 0);
+            existing.gloowalls = (existing.gloowalls || 0) + (p.gloowalls || 0);
+            existing.gloowallsDestroyed = (existing.gloowallsDestroyed || 0) + (p.gloowallsDestroyed || 0);
+            existing.revives = (existing.revives || 0) + (p.revives || 0);
+            existing.alliesRevived = (existing.alliesRevived || 0) + (p.alliesRevived || 0);
+        }
+     });
+
+     return Array.from(playerMap.values())
+        .map(p => ({
+            ...p,
+            kpg: p.matches > 0 ? parseFloat((p.totalKills / p.matches).toFixed(2)) : 0,
+            events: 'WB 2024 S2'
+        }))
+        .sort((a, b) => b.totalKills - a.totalKills)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+  }, [raw24s2]);
+
+  // Specific Data for Standings View (WB 2025 S1 Players) - NEW
+  const wb2025S1Players = useMemo(() => {
+     const playerMap = new Map<string, KillStat>();
+     raw25s1.forEach(p => {
+        const standardizedName = normalizePlayerName(p.player);
+        const key = standardizedName.toLowerCase();
+        
+        if (!playerMap.has(key)) {
+            playerMap.set(key, { ...p, player: standardizedName });
+        } else {
+            const existing = playerMap.get(key)!;
+            existing.totalKills += p.totalKills;
+            existing.matches += p.matches;
+            existing.headshots = (existing.headshots || 0) + (p.headshots || 0);
+            existing.knockdowns = (existing.knockdowns || 0) + (p.knockdowns || 0);
+            existing.gloowalls = (existing.gloowalls || 0) + (p.gloowalls || 0);
+            existing.gloowallsDestroyed = (existing.gloowallsDestroyed || 0) + (p.gloowallsDestroyed || 0);
+            existing.revives = (existing.revives || 0) + (p.revives || 0);
+            existing.alliesRevived = (existing.alliesRevived || 0) + (p.alliesRevived || 0);
+        }
+     });
+
+     return Array.from(playerMap.values())
+        .map(p => ({
+            ...p,
+            kpg: p.matches > 0 ? parseFloat((p.totalKills / p.matches).toFixed(2)) : 0,
+            events: 'WB 2025 S1'
+        }))
+        .sort((a, b) => b.totalKills - a.totalKills)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+  }, [raw25s1]);
+
+  // Specific Data for Standings View (WB 2025 S2 Players) - NEW
+  const wb2025S2Players = useMemo(() => {
+     const playerMap = new Map<string, KillStat>();
+     raw25s2.forEach(p => {
+        const standardizedName = normalizePlayerName(p.player);
+        const key = standardizedName.toLowerCase();
+        
+        if (!playerMap.has(key)) {
+            playerMap.set(key, { ...p, player: standardizedName });
+        } else {
+            const existing = playerMap.get(key)!;
+            existing.totalKills += p.totalKills;
+            existing.matches += p.matches;
+            existing.headshots = (existing.headshots || 0) + (p.headshots || 0);
+            existing.knockdowns = (existing.knockdowns || 0) + (p.knockdowns || 0);
+            existing.gloowalls = (existing.gloowalls || 0) + (p.gloowalls || 0);
+            existing.gloowallsDestroyed = (existing.gloowallsDestroyed || 0) + (p.gloowallsDestroyed || 0);
+            existing.revives = (existing.revives || 0) + (p.revives || 0);
+            existing.alliesRevived = (existing.alliesRevived || 0) + (p.alliesRevived || 0);
+        }
+     });
+
+     return Array.from(playerMap.values())
+        .map(p => ({
+            ...p,
+            kpg: p.matches > 0 ? parseFloat((p.totalKills / p.matches).toFixed(2)) : 0,
+            events: 'WB 2025 S2'
+        }))
+        .sort((a, b) => b.totalKills - a.totalKills)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+  }, [raw25s2]);
+
   // Helper for filter buttons style
   const FilterButton = ({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) => (
     <button
@@ -260,7 +389,7 @@ const App: React.FC = () => {
 
 
   const handlePlayerClick = (player: any) => {
-    if (activeTab === 'kills' || activeTab === 'ffwsbr') {
+    if (activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'standings') {
       setSelectedPlayer(player);
     }
   };
@@ -341,7 +470,7 @@ const App: React.FC = () => {
                     }`}
                   >
                     <Globe className={`w-4 h-4 ${activeTab === 'ffwsbr' ? 'text-indigo-500' : ''}`} />
-                    FFWSBR
+                    Jogadores WB
                   </button>
                   <button 
                      onClick={() => setActiveTab('earnings')}
@@ -363,7 +492,7 @@ const App: React.FC = () => {
                     }`}
                   >
                     <Trophy className={`w-4 h-4 ${activeTab === 'standings' ? 'text-purple-500' : ''}`} />
-                    Classificação WB's
+                    FFWSBR
                   </button>
                 </div>
               </div>
@@ -432,7 +561,7 @@ const App: React.FC = () => {
                       activeTab === 'ffwsbr' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' : 'text-slate-300'
                     }`}
                   >
-                    <Globe className="w-5 h-5" /> FFWSBR
+                    <Globe className="w-5 h-5" /> Jogadores WB
                   </button>
                   <button 
                      onClick={() => { setActiveTab('earnings'); setMobileMenuOpen(false); }}
@@ -448,7 +577,7 @@ const App: React.FC = () => {
                       activeTab === 'standings' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' : 'text-slate-300'
                     }`}
                   >
-                    <Trophy className="w-5 h-5" /> Classificação WB's
+                    <Trophy className="w-5 h-5" /> FFWSBR
                   </button>
                   <div className="flex gap-2 mt-4 px-2">
                      <button onClick={() => { setShowEntry(true); setMobileMenuOpen(false); }} className="flex-1 py-2 bg-white/5 rounded text-sm">Início</button>
@@ -482,11 +611,11 @@ const App: React.FC = () => {
                     </>
                   ) : activeTab === 'ffwsbr' ? (
                     <>
-                       FFWSBR <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">2025</span>
+                       Jogadores <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">WB</span>
                     </>
                   ) : activeTab === 'standings' ? (
                      <>
-                        Classificação <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">WB's</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">FFWSBR</span>
                      </>
                   ) : (
                     <>
@@ -498,9 +627,9 @@ const App: React.FC = () => {
                   {activeTab === 'kills' 
                     ? 'Ranking oficial da LBFF Série A. Analise o desempenho histórico das maiores lendas do cenário competitivo.'
                     : activeTab === 'ffwsbr'
-                    ? 'Hub oficial de estatísticas do FFWS Brasil. Dados combinados e segmentados por temporada.'
+                    ? 'Hub oficial de estatísticas dos Jogadores WB. Dados combinados e segmentados por temporada.'
                     : activeTab === 'standings'
-                    ? 'Tabelas de classificação oficiais atualizadas de todas as edições do World Series Brasil.'
+                    ? 'Tabelas de classificação oficiais atualizadas de todas as edições do FFWS Brasil.'
                     : 'Monitoramento em tempo real das premiações globais e valores de mercado dos pro-players.'
                   }
                 </p>
@@ -581,7 +710,13 @@ const App: React.FC = () => {
             {/* Main Column */}
             <div className="flex-1 min-w-0">
               {activeTab === 'standings' ? (
-                  <StandingsView />
+                  <StandingsView 
+                    players24s1={wb2024S1Players} 
+                    players24s2={wb2024S2Players}
+                    players25s1={wb2025S1Players}
+                    players25s2={wb2025S2Players}
+                    onPlayerClick={handlePlayerClick}
+                  />
               ) : activeTab === 'ffwsbr' && isLoadingFFWS ? (
                   <div className="h-[400px] flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-pulse">
                       <div className="flex flex-col items-center gap-4">

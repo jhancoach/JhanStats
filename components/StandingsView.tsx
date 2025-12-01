@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Target, Calendar, Crown, Medal, Shield, AlertCircle, RefreshCw, Swords, Hash, Crosshair, Zap, Award } from 'lucide-react';
+import { Trophy, Target, Calendar, Crown, Medal, Shield, AlertCircle, RefreshCw, Swords, Hash, Crosshair, Zap, Award, User, LayoutList } from 'lucide-react';
+import { KillStat } from '../types';
+import { DataTable } from './DataTable';
 
 // URLs exatas fornecidas
 const URLS = {
@@ -24,6 +26,7 @@ const URLS = {
 
 type SeasonKey = 'wb2024s1' | 'wb2024s2' | 'wb2025s1' | 'wb2025s2';
 type StageKey = 'main' | 'general' | 'pointrush' | 'final';
+type ViewMode = 'standings' | 'players';
 
 interface TeamStanding {
   rank: number;
@@ -45,9 +48,18 @@ interface MVPStanding {
   value?: string; // Fallback for simple display if needed
 }
 
-export const StandingsView: React.FC = () => {
+interface StandingsViewProps {
+    players24s1?: KillStat[];
+    players24s2?: KillStat[];
+    players25s1?: KillStat[];
+    players25s2?: KillStat[];
+    onPlayerClick?: (player: KillStat) => void;
+}
+
+export const StandingsView: React.FC<StandingsViewProps> = ({ players24s1, players24s2, players25s1, players25s2, onPlayerClick }) => {
   const [activeSeason, setActiveSeason] = useState<SeasonKey>('wb2024s1');
   const [activeStage, setActiveStage] = useState<StageKey>('general');
+  const [viewMode, setViewMode] = useState<ViewMode>('standings');
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   
@@ -58,6 +70,8 @@ export const StandingsView: React.FC = () => {
   // Reset stage when season changes
   const handleSeasonChange = (season: SeasonKey) => {
       setActiveSeason(season);
+      // Reset view mode when changing season
+      setViewMode('standings');
       if (season === 'wb2024s1' || season === 'wb2024s2') setActiveStage('main');
       else setActiveStage('general');
   };
@@ -277,13 +291,44 @@ export const StandingsView: React.FC = () => {
                </button>
             ))}
           </div>
-          <button 
-             onClick={fetchData}
-             className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-             title="Recarregar Dados"
-          >
-             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          
+          <div className="flex gap-3">
+              {/* WB Special Toggles */}
+              {['wb2024s1', 'wb2024s2', 'wb2025s1', 'wb2025s2'].includes(activeSeason) && (
+                  <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 shadow-inner">
+                      <button
+                          onClick={() => setViewMode('standings')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                              viewMode === 'standings'
+                              ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/20 ring-1 ring-white/10'
+                              : 'text-slate-500 hover:text-white hover:bg-white/5'
+                          }`}
+                      >
+                          <LayoutList className="w-3.5 h-3.5" />
+                          Classificação
+                      </button>
+                      <button
+                          onClick={() => setViewMode('players')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                              viewMode === 'players'
+                              ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-md shadow-amber-500/20 ring-1 ring-white/10'
+                              : 'text-slate-500 hover:text-white hover:bg-white/5'
+                          }`}
+                      >
+                          <User className="w-3.5 h-3.5" />
+                          Jogadores
+                      </button>
+                  </div>
+              )}
+
+              <button 
+                 onClick={fetchData}
+                 className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                 title="Recarregar Dados"
+              >
+                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+          </div>
        </div>
 
        {/* Sub-Tabs (Stages) */}
@@ -317,121 +362,158 @@ export const StandingsView: React.FC = () => {
        {!loading && (
            <div className="flex flex-col gap-6">
                
-               {/* Main Standings Table */}
-               <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden flex flex-col">
-                   <div className="p-5 border-b border-white/5 bg-black/20 flex justify-between items-center">
-                       <h3 className="font-bold text-white flex items-center gap-2">
-                           <Trophy className="w-5 h-5 text-amber-500" />
-                           Tabela de Classificação
-                       </h3>
-                       <div className="text-right">
-                           <div className="text-xs text-slate-500 uppercase font-mono">
-                               {activeSeason.toUpperCase().replace('WB', 'WB ')} • {activeStage.toUpperCase()}
+               {/* View Logic Switcher */}
+               {viewMode === 'players' && activeSeason === 'wb2024s1' ? (
+                   <div className="animate-fade-in">
+                       <DataTable 
+                           data={players24s1 || []} 
+                           type="ffwsbr" 
+                           onPlayerClick={onPlayerClick}
+                       />
+                   </div>
+               ) : viewMode === 'players' && activeSeason === 'wb2024s2' ? (
+                   <div className="animate-fade-in">
+                       <DataTable 
+                           data={players24s2 || []} 
+                           type="ffwsbr" 
+                           onPlayerClick={onPlayerClick}
+                       />
+                   </div>
+               ) : viewMode === 'players' && activeSeason === 'wb2025s1' ? (
+                   <div className="animate-fade-in">
+                       <DataTable 
+                           data={players25s1 || []} 
+                           type="ffwsbr" 
+                           onPlayerClick={onPlayerClick}
+                       />
+                   </div>
+               ) : viewMode === 'players' && activeSeason === 'wb2025s2' ? (
+                   <div className="animate-fade-in">
+                       <DataTable 
+                           data={players25s2 || []} 
+                           type="ffwsbr" 
+                           onPlayerClick={onPlayerClick}
+                       />
+                   </div>
+               ) : (
+                   <>
+                       {/* Main Standings Table */}
+                       <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden flex flex-col">
+                           <div className="p-5 border-b border-white/5 bg-black/20 flex justify-between items-center">
+                               <h3 className="font-bold text-white flex items-center gap-2">
+                                   <Trophy className="w-5 h-5 text-amber-500" />
+                                   Tabela de Classificação
+                               </h3>
+                               <div className="text-right">
+                                   <div className="text-xs text-slate-500 uppercase font-mono">
+                                       {activeSeason.toUpperCase().replace('WB', 'WB ')} • {activeStage.toUpperCase()}
+                                   </div>
+                                   <div className="text-[10px] text-slate-600">
+                                       Atualizado: {lastUpdated.toLocaleTimeString()}
+                                   </div>
+                               </div>
                            </div>
-                           <div className="text-[10px] text-slate-600">
-                               Atualizado: {lastUpdated.toLocaleTimeString()}
+                           
+                           <div className="overflow-x-auto custom-scrollbar">
+                               <table className="w-full text-left border-collapse">
+                                   <thead>
+                                       <tr className="text-[10px] uppercase text-slate-500 font-bold tracking-wider bg-white/5">
+                                           <th className="px-4 py-3 text-center w-16">Rank</th>
+                                           <th className="px-4 py-3">Equipe</th>
+                                           <th className="px-4 py-3 text-center">Booyahs</th>
+                                           <th className="px-4 py-3 text-center">Pontos</th>
+                                           <th className="px-4 py-3 text-center">Abates</th>
+                                           <th className="px-4 py-3 text-center">Quedas</th>
+                                       </tr>
+                                   </thead>
+                                   <tbody className="divide-y divide-white/5 text-sm">
+                                       {teamData.map((team, idx) => (
+                                           <tr key={idx} className={`hover:bg-white/5 transition-colors ${idx < 3 ? 'bg-indigo-500/5' : ''}`}>
+                                               <td className="px-4 py-3 text-center">
+                                                   <div className={`w-8 h-8 mx-auto flex items-center justify-center rounded-lg font-bold ${
+                                                       team.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-black shadow-lg shadow-amber-500/20' :
+                                                       team.rank === 2 ? 'bg-gradient-to-br from-slate-300 to-slate-500 text-black' :
+                                                       team.rank === 3 ? 'bg-gradient-to-br from-orange-400 to-red-500 text-black' :
+                                                       'text-slate-500 bg-white/5'
+                                                   }`}>
+                                                       {team.rank}
+                                                   </div>
+                                               </td>
+                                               <td className="px-4 py-3 font-bold text-white">
+                                                   {team.team}
+                                                   {idx === 0 && <Crown className="w-3 h-3 text-amber-500 inline ml-2 -mt-1" />}
+                                               </td>
+                                               <td className="px-4 py-3 text-center text-slate-400">
+                                                   {team.booyahs > 0 ? (
+                                                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-xs">
+                                                          <Target className="w-3 h-3" /> {team.booyahs}
+                                                       </span>
+                                                   ) : '-'}
+                                               </td>
+                                               <td className="px-4 py-3 text-center">
+                                                   <span className="font-mono font-black text-lg text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                                                       {team.points}
+                                                   </span>
+                                               </td>
+                                               <td className="px-4 py-3 text-center text-slate-300 font-mono">
+                                                    {team.kills > 0 ? (
+                                                        <span className="flex items-center justify-center gap-1">
+                                                            <Swords className="w-3 h-3 text-slate-500" /> {team.kills}
+                                                        </span>
+                                                    ) : '-'}
+                                               </td>
+                                               <td className="px-4 py-3 text-center text-slate-400 font-mono">
+                                                    {team.matches > 0 ? (
+                                                        <span className="flex items-center justify-center gap-1">
+                                                             <Hash className="w-3 h-3 text-slate-600" /> {team.matches}
+                                                        </span>
+                                                    ) : '-'}
+                                               </td>
+                                           </tr>
+                                       ))}
+                                       {teamData.length === 0 && (
+                                           <tr>
+                                               <td colSpan={6} className="px-4 py-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+                                                   <AlertCircle className="w-8 h-8 opacity-50" />
+                                                   <div className="text-lg font-medium">Nenhuma informação encontrada</div>
+                                                   <div className="text-xs opacity-50 max-w-xs text-center">
+                                                       Não foi possível ler os dados da planilha. Verifique a URL ou tente novamente mais tarde.
+                                                   </div>
+                                               </td>
+                                           </tr>
+                                       )}
+                                   </tbody>
+                               </table>
                            </div>
                        </div>
-                   </div>
-                   
-                   <div className="overflow-x-auto custom-scrollbar">
-                       <table className="w-full text-left border-collapse">
-                           <thead>
-                               <tr className="text-[10px] uppercase text-slate-500 font-bold tracking-wider bg-white/5">
-                                   <th className="px-4 py-3 text-center w-16">Rank</th>
-                                   <th className="px-4 py-3">Equipe</th>
-                                   <th className="px-4 py-3 text-center">Booyahs</th>
-                                   <th className="px-4 py-3 text-center">Pontos</th>
-                                   <th className="px-4 py-3 text-center">Abates</th>
-                                   <th className="px-4 py-3 text-center">Quedas</th>
-                               </tr>
-                           </thead>
-                           <tbody className="divide-y divide-white/5 text-sm">
-                               {teamData.map((team, idx) => (
-                                   <tr key={idx} className={`hover:bg-white/5 transition-colors ${idx < 3 ? 'bg-indigo-500/5' : ''}`}>
-                                       <td className="px-4 py-3 text-center">
-                                           <div className={`w-8 h-8 mx-auto flex items-center justify-center rounded-lg font-bold ${
-                                               team.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-black shadow-lg shadow-amber-500/20' :
-                                               team.rank === 2 ? 'bg-gradient-to-br from-slate-300 to-slate-500 text-black' :
-                                               team.rank === 3 ? 'bg-gradient-to-br from-orange-400 to-red-500 text-black' :
-                                               'text-slate-500 bg-white/5'
-                                           }`}>
-                                               {team.rank}
-                                           </div>
-                                       </td>
-                                       <td className="px-4 py-3 font-bold text-white">
-                                           {team.team}
-                                           {idx === 0 && <Crown className="w-3 h-3 text-amber-500 inline ml-2 -mt-1" />}
-                                       </td>
-                                       <td className="px-4 py-3 text-center text-slate-400">
-                                           {team.booyahs > 0 ? (
-                                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-xs">
-                                                  <Target className="w-3 h-3" /> {team.booyahs}
-                                               </span>
-                                           ) : '-'}
-                                       </td>
-                                       <td className="px-4 py-3 text-center">
-                                           <span className="font-mono font-black text-lg text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                                               {team.points}
-                                           </span>
-                                       </td>
-                                       <td className="px-4 py-3 text-center text-slate-300 font-mono">
-                                            {team.kills > 0 ? (
-                                                <span className="flex items-center justify-center gap-1">
-                                                    <Swords className="w-3 h-3 text-slate-500" /> {team.kills}
-                                                </span>
-                                            ) : '-'}
-                                       </td>
-                                       <td className="px-4 py-3 text-center text-slate-400 font-mono">
-                                            {team.matches > 0 ? (
-                                                <span className="flex items-center justify-center gap-1">
-                                                     <Hash className="w-3 h-3 text-slate-600" /> {team.matches}
-                                                </span>
-                                            ) : '-'}
-                                       </td>
-                                   </tr>
-                               ))}
-                               {teamData.length === 0 && (
-                                   <tr>
-                                       <td colSpan={6} className="px-4 py-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
-                                           <AlertCircle className="w-8 h-8 opacity-50" />
-                                           <div className="text-lg font-medium">Nenhuma informação encontrada</div>
-                                           <div className="text-xs opacity-50 max-w-xs text-center">
-                                               Não foi possível ler os dados da planilha. Verifique a URL ou tente novamente mais tarde.
-                                           </div>
-                                       </td>
-                                   </tr>
-                               )}
-                           </tbody>
-                       </table>
-                   </div>
-               </div>
 
-               {/* MVP Detailed Lists (If available - Specific to WB2024S1) */}
-               {activeSeason === 'wb2024s1' && (
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      <MVPTable title="Troféus Kaspersky MVP" data={mvpData1} color="emerald" />
-                      <MVPTable title="Troféus Kaspersky MVA" data={mvpData2} color="indigo" />
-                  </div>
-               )}
+                       {/* MVP Detailed Lists (If available - Specific to WB2024S1) */}
+                       {activeSeason === 'wb2024s1' && (
+                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                              <MVPTable title="Troféus Kaspersky MVP" data={mvpData1} color="emerald" />
+                              <MVPTable title="Troféus Kaspersky MVA" data={mvpData2} color="indigo" />
+                          </div>
+                       )}
 
-               {/* General Info Box if no MVP data specific to view */}
-               {activeSeason !== 'wb2024s1' && (
-                   <div className="glass-panel p-6 rounded-2xl border border-white/10 relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-4 opacity-10">
-                           <Medal className="w-32 h-32 text-white rotate-12" />
-                       </div>
-                       <h4 className="text-lg font-bold text-white mb-2 relative z-10">Sobre a Tabela</h4>
-                       <p className="text-sm text-slate-400 leading-relaxed relative z-10 mb-4">
-                           Os dados de classificação são extraídos diretamente das planilhas oficiais. A pontuação inclui pontos de colocação e abates.
-                       </p>
-                       <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl relative z-10 flex gap-3">
-                           <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
-                           <div className="text-xs text-amber-200">
-                               Dados sincronizados em tempo real com os registros da competição.
+                       {/* General Info Box if no MVP data specific to view */}
+                       {activeSeason !== 'wb2024s1' && (
+                           <div className="glass-panel p-6 rounded-2xl border border-white/10 relative overflow-hidden">
+                               <div className="absolute top-0 right-0 p-4 opacity-10">
+                                   <Medal className="w-32 h-32 text-white rotate-12" />
+                               </div>
+                               <h4 className="text-lg font-bold text-white mb-2 relative z-10">Sobre a Tabela</h4>
+                               <p className="text-sm text-slate-400 leading-relaxed relative z-10 mb-4">
+                                   Os dados de classificação são extraídos diretamente das planilhas oficiais. A pontuação inclui pontos de colocação e abates.
+                               </p>
+                               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl relative z-10 flex gap-3">
+                                   <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+                                   <div className="text-xs text-amber-200">
+                                       Dados sincronizados em tempo real com os registros da competição.
+                                   </div>
+                               </div>
                            </div>
-                       </div>
-                   </div>
+                       )}
+                   </>
                )}
            </div>
        )}
