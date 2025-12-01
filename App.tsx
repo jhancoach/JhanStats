@@ -6,10 +6,11 @@ import { StatsPanel } from './components/StatsPanel';
 import { PlayerProgressionModal } from './components/PlayerProgressionModal';
 import { ComparisonModal } from './components/ComparisonModal';
 import { PlayerProfileView } from './components/PlayerProfileView';
+import { StandingsView } from './components/StandingsView';
 import { EntryScreen } from './components/EntryScreen';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
-import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User } from 'lucide-react';
+import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy } from 'lucide-react';
 
 // New Split CSV Links
 const WB_2024_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYc8m8JZnDeFr3FeN97I4NJwwuc0P1uN8v6JEv06_OflL5QCr_4t75yOe-xkqC9TnS3Cf-tRLT4aDZ/pub?output=csv';
@@ -22,7 +23,7 @@ export type SplitFilter = 'all' | 's1' | 's2' | 'wb24s1' | 'wb24s2' | 'wb25s1' |
 
 const App: React.FC = () => {
   const [showEntry, setShowEntry] = useState(true);
-  const [activeTab, setActiveTab] = useState<'kills' | 'earnings' | 'ffwsbr'>('kills');
+  const [activeTab, setActiveTab] = useState<'kills' | 'earnings' | 'ffwsbr' | 'standings'>('kills');
   const [wbSubTab, setWbSubTab] = useState<WBSubTab>('general'); // Default to General as requested
   const [splitFilter, setSplitFilter] = useState<SplitFilter>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -353,6 +354,17 @@ const App: React.FC = () => {
                     <DollarSign className={`w-4 h-4 ${activeTab === 'earnings' ? 'text-cyan-500' : ''}`} />
                     Ganhos
                   </button>
+                  <button 
+                     onClick={() => setActiveTab('standings')}
+                     className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'standings' 
+                      ? 'bg-gradient-to-b from-slate-800 to-black text-purple-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-purple-500/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Trophy className={`w-4 h-4 ${activeTab === 'standings' ? 'text-purple-500' : ''}`} />
+                    Classificação WB's
+                  </button>
                 </div>
               </div>
 
@@ -430,6 +442,14 @@ const App: React.FC = () => {
                   >
                     <DollarSign className="w-5 h-5" /> Ganhos
                   </button>
+                  <button 
+                     onClick={() => { setActiveTab('standings'); setMobileMenuOpen(false); }}
+                     className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
+                      activeTab === 'standings' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' : 'text-slate-300'
+                    }`}
+                  >
+                    <Trophy className="w-5 h-5" /> Classificação WB's
+                  </button>
                   <div className="flex gap-2 mt-4 px-2">
                      <button onClick={() => { setShowEntry(true); setMobileMenuOpen(false); }} className="flex-1 py-2 bg-white/5 rounded text-sm">Início</button>
                      <button onClick={() => { handleAdminToggle(); setMobileMenuOpen(false); }} className={`flex-1 py-2 rounded text-sm ${isAdmin ? 'bg-amber-600' : 'bg-white/5'}`}>{isAdmin ? 'Sair Admin' : 'Admin'}</button>
@@ -464,6 +484,10 @@ const App: React.FC = () => {
                     <>
                        FFWSBR <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">2025</span>
                     </>
+                  ) : activeTab === 'standings' ? (
+                     <>
+                        Classificação <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">WB's</span>
+                     </>
                   ) : (
                     <>
                       Elite dos <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Ganhos</span>
@@ -475,6 +499,8 @@ const App: React.FC = () => {
                     ? 'Ranking oficial da LBFF Série A. Analise o desempenho histórico das maiores lendas do cenário competitivo.'
                     : activeTab === 'ffwsbr'
                     ? 'Hub oficial de estatísticas do FFWS Brasil. Dados combinados e segmentados por temporada.'
+                    : activeTab === 'standings'
+                    ? 'Tabelas de classificação oficiais atualizadas de todas as edições do World Series Brasil.'
                     : 'Monitoramento em tempo real das premiações globais e valores de mercado dos pro-players.'
                   }
                 </p>
@@ -554,7 +580,9 @@ const App: React.FC = () => {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Main Column */}
             <div className="flex-1 min-w-0">
-              {activeTab === 'ffwsbr' && isLoadingFFWS ? (
+              {activeTab === 'standings' ? (
+                  <StandingsView />
+              ) : activeTab === 'ffwsbr' && isLoadingFFWS ? (
                   <div className="h-[400px] flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-pulse">
                       <div className="flex flex-col items-center gap-4">
                           <Globe className="w-10 h-10 text-indigo-500 animate-spin" />
@@ -566,10 +594,10 @@ const App: React.FC = () => {
                     {/* Render Profile View if selected subtab is profile */}
                     {activeTab === 'ffwsbr' && wbSubTab === 'profile' ? (
                        <PlayerProfileView players={mergedFFWSData} />
-                    ) : (
+                    ) : activeTab !== 'standings' && (
                        <DataTable 
                           key={`${activeTab}-${wbSubTab}-${splitFilter}`} 
-                          type={activeTab}
+                          type={activeTab as any}
                           subTab={wbSubTab === 'profile' ? 'general' : wbSubTab}
                           splitFilter={splitFilter}
                           data={getCurrentData()}
@@ -582,12 +610,12 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* Sidebar (Hide in Profile View to give full width) */}
-            {(activeTab !== 'ffwsbr' || wbSubTab !== 'profile') && (
+            {/* Sidebar (Hide in Profile View and Standings to give full width) */}
+            {(activeTab !== 'standings' && (activeTab !== 'ffwsbr' || wbSubTab !== 'profile')) && (
               <StatsPanel 
                 killsData={activeTab === 'ffwsbr' ? mergedFFWSData : killStats} 
                 earningsData={EARNING_STATS} 
-                activeTab={activeTab}
+                activeTab={activeTab as any}
               />
             )}
           </div>
@@ -603,7 +631,7 @@ const App: React.FC = () => {
              </div>
              <p className="text-slate-500 text-sm">
                &copy; 2024 JhanStats.
-               {activeTab === 'ffwsbr' ? (
+               {activeTab === 'ffwsbr' || activeTab === 'standings' ? (
                   <> Dados tratados por <span className="text-slate-400 font-medium">Jhan</span>.</>
                ) : (
                   <> Dados fornecidos por <span className="text-slate-400 font-medium">Liquipedia</span>.</>

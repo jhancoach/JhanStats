@@ -4,7 +4,6 @@ import {
   Search, 
   Trophy, 
   Crosshair, 
-  Target, 
   Swords, 
   Calendar,
   Globe,
@@ -13,7 +12,8 @@ import {
   Shield,
   Heart,
   UserMinus,
-  Printer
+  FileText,
+  Target
 } from 'lucide-react';
 import {
   AreaChart,
@@ -206,9 +206,10 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
                       </div>
                       <button 
                          onClick={handlePrint}
-                         className="no-print flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-indigo-500/20"
+                         className="no-print flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
+                         title="Imprimir ou Salvar como PDF"
                       >
-                         <Printer className="w-4 h-4" /> PDF / Imprimir
+                         <FileText className="w-4 h-4" /> Gerar Relatório
                       </button>
                   </div>
                   <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter mb-2 break-all">{player?.player}</h1>
