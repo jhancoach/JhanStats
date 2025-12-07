@@ -70,7 +70,7 @@ export const DashboardCharts: React.FC<ChartsProps> = ({ type, data }) => {
           <Bar 
             dataKey={dataKey} 
             radius={isKills ? [0, 4, 4, 0] : [4, 4, 0, 0]}
-            animationDuration={800} // Reduced duration for faster perceived loading
+            animationDuration={400} // Optimized for speed
             animationEasing="ease-out"
           >
              {top10.map((entry, index) => (

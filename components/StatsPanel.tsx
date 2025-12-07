@@ -5,12 +5,12 @@ import { Crosshair, DollarSign, Crown, TrendingUp, Globe, Swords, Target, Clock,
 interface StatsPanelProps {
   killsData: KillStat[];
   earningsData: EarningStat[];
-  activeTab: 'kills' | 'earnings' | 'ffwsbr';
+  activeTab: 'kills' | 'earnings' | 'ffwsbr' | 'laff';
 }
 
 const StatCard = ({ title, value, sub, icon: Icon, colorClass, gradient }: any) => (
-  <div className="glass-panel p-6 rounded-2xl mb-5 relative overflow-hidden group hover:border-white/20 transition-all duration-500">
-    <div className={`absolute -top-10 -right-10 p-3 opacity-10 group-hover:opacity-20 transition-opacity duration-500 ${colorClass}`}>
+  <div className="glass-panel p-6 rounded-2xl mb-5 relative overflow-hidden group hover:border-white/20 transition-all duration-300">
+    <div className={`absolute -top-10 -right-10 p-3 opacity-10 group-hover:opacity-20 transition-opacity duration-300 ${colorClass}`}>
       <Icon className="w-32 h-32 transform rotate-12" />
     </div>
     
@@ -28,7 +28,7 @@ const StatCard = ({ title, value, sub, icon: Icon, colorClass, gradient }: any) 
     </div>
     
     {/* Bottom Gradient Line */}
-    <div className={`absolute bottom-0 left-0 h-1 w-full ${gradient} opacity-50 group-hover:opacity-100 transition-opacity`}></div>
+    <div className={`absolute bottom-0 left-0 h-1 w-full ${gradient} opacity-50 group-hover:opacity-100 transition-opacity duration-300`}></div>
   </div>
 );
 
@@ -89,12 +89,12 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData,
   // Logic separation based on Tab
   let top3TotalKills, top3Avg, top3Matches, top3WBKills;
 
-  if (activeTab === 'ffwsbr') {
-      // For FFWSBR tab, the data passed is ALREADY specific to WB/FFWS, so just sort it
+  if (activeTab === 'ffwsbr' || activeTab === 'laff') {
+      // For FFWSBR or LAFF tab, the data passed is ALREADY specific so just sort it
       top3TotalKills = [...killsData].sort((a, b) => b.totalKills - a.totalKills).slice(0, 3);
       top3Avg = [...killsData].sort((a, b) => b.kpg - a.kpg).slice(0, 3);
       top3Matches = [...killsData].sort((a, b) => b.matches - a.matches).slice(0, 3);
-      top3WBKills = top3TotalKills; // Same for this view
+      top3WBKills = top3TotalKills; // Reuse for simplicity if needed, but likely hidden for Laff
   } else {
       // For standard tab
       const wbActivePlayers = killsData.filter(p => getWBInfo(p).hasActivity);
@@ -126,6 +126,11 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData,
              Tratamento de dados <span className="text-indigo-400 font-semibold">Jhan</span>. <br/>Tabela completa FFWS Brasil 2025.
            </p>
          )}
+         {activeTab === 'laff' && (
+           <p className="text-xs text-slate-400/80 mb-6 pl-1 border-l-2 border-orange-500/50">
+             Ranking da <span className="text-orange-400 font-semibold">Liga Amadora</span>. <br/>Tabela de Abates e Estatísticas Gerais.
+           </p>
+         )}
          {activeTab === 'earnings' && (
            <p className="text-xs text-slate-400/80 mb-6 pl-1 border-l-2 border-indigo-500/50">
              Ranking financeiro via <span className="text-white font-semibold">Liquipedia</span>. <br/>Valores acumulados em torneios oficiais.
@@ -133,16 +138,16 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData,
          )}
        </div>
 
-       {(activeTab === 'kills' || activeTab === 'ffwsbr') ? (
+       {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff') ? (
          <>
             {/* Top 3 Total Kills */}
             <Top3List 
-              title={activeTab === 'ffwsbr' ? "MVP FFWSBR" : "Reis do Abate"}
+              title={activeTab === 'ffwsbr' ? "MVP FFWSBR" : activeTab === 'laff' ? "MVP LAFF" : "Reis do Abate"}
               data={top3TotalKills} 
               metricKey="totalKills" 
               label="Total Kills"
               icon={Swords}
-              colorClass="text-amber-400"
+              colorClass={activeTab === 'laff' ? "text-orange-400" : "text-amber-400"}
             />
 
             {/* Top 3 Average */}
@@ -155,8 +160,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData,
               colorClass="text-red-400"
             />
 
-            {/* Top 3 WB Kills - Only show in normal tab, redundant in WB tab */}
-            {activeTab !== 'ffwsbr' && (
+            {/* Top 3 WB Kills - Only show in normal tab, redundant in others */}
+            {activeTab === 'kills' && (
                 <Top3List 
                 title="Lendas World Series" 
                 data={top3WBKills} 
@@ -169,7 +174,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData,
 
             {/* Top 3 Matches */}
             <Top3List 
-              title={activeTab === 'ffwsbr' ? "Mais Ativos" : "Veteranos (Partidas)"}
+              title={activeTab === 'ffwsbr' || activeTab === 'laff' ? "Mais Ativos" : "Veteranos (Partidas)"}
               data={top3Matches} 
               metricKey="matches" 
               label="Jogos"

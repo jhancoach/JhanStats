@@ -283,6 +283,7 @@ Gerado via JhanStats`;
                     fill="url(#colorKills)" 
                     activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
                     isAnimationActive={!isReportMode} // Disable animation for print/report
+                    animationDuration={500}
                   >
                     <LabelList 
                       dataKey="kills" 

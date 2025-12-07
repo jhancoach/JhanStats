@@ -404,6 +404,25 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClos
               p2Data: safeV2,
               winner: checkWinner(safeV1, safeV2)
           });
+
+          // Add Average for Knockdowns specifically
+          if (k === 'knockdowns') {
+             const m1 = player1?.matches || 1;
+             const m2 = player2?.matches || 1;
+             
+             const avg1 = m1 > 0 ? (safeV1 / m1).toFixed(2) : "0.00";
+             const avg2 = m2 > 0 ? (safeV2 / m2).toFixed(2) : "0.00";
+             
+             const numAvg1 = parseFloat(avg1);
+             const numAvg2 = parseFloat(avg2);
+
+             rows.push({
+                 label: "Média Derrub.",
+                 p1Data: avg1,
+                 p2Data: avg2,
+                 winner: checkWinner(numAvg1, numAvg2)
+             });
+          }
       }
   });
 

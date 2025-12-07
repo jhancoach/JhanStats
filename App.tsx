@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { KILL_STATS, EARNING_STATS } from './constants';
-import { KillStat } from './types';
+import { KILL_STATS, LAFF_STATS } from './constants';
+import { KillStat, EarningStat } from './types';
 import { DataTable } from './components/DataTable';
 import { StatsPanel } from './components/StatsPanel';
 import { PlayerProgressionModal } from './components/PlayerProgressionModal';
@@ -10,7 +10,20 @@ import { StandingsView } from './components/StandingsView';
 import { EntryScreen } from './components/EntryScreen';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
-import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy } from 'lucide-react';
+import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair } from 'lucide-react';
+
+const EARNING_STATS: EarningStat[] = [
+  { rank: 1, player: "Nobru", earnings: 245000, gold: 1, silver: 0, bronze: 1, s_tier: 5, team: "Fluxo" },
+  { rank: 2, player: "Kronos", earnings: 210000, gold: 2, silver: 0, bronze: 0, s_tier: 3, team: "LOUD" },
+  { rank: 3, player: "Yago", earnings: 185000, gold: 1, silver: 1, bronze: 0, s_tier: 4, team: "LOUD" },
+  { rank: 4, player: "Cauan", earnings: 175000, gold: 1, silver: 1, bronze: 0, s_tier: 4, team: "LOUD" },
+  { rank: 5, player: "Lost", earnings: 160000, gold: 1, silver: 0, bronze: 1, s_tier: 3, team: "LOUD" },
+  { rank: 6, player: "Draxx", earnings: 150000, gold: 1, silver: 0, bronze: 0, s_tier: 2, team: "Magic Squad" },
+  { rank: 7, player: "Syaz", earnings: 140000, gold: 0, silver: 1, bronze: 1, s_tier: 3, team: "Fluxo" },
+  { rank: 8, player: "Ousado", earnings: 130000, gold: 0, silver: 1, bronze: 0, s_tier: 2, team: "Fluxo" },
+  { rank: 9, player: "Modestia", earnings: 120000, gold: 0, silver: 0, bronze: 2, s_tier: 3, team: "Vivo Keyd" },
+  { rank: 10, player: "Deadgod", earnings: 110000, gold: 0, silver: 0, bronze: 2, s_tier: 3, team: "Vivo Keyd" }
+];
 
 // New Split CSV Links
 const WB_2024_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYc8m8JZnDeFr3FeN97I4NJwwuc0P1uN8v6JEv06_OflL5QCr_4t75yOe-xkqC9TnS3Cf-tRLT4aDZ/pub?output=csv';
@@ -46,7 +59,7 @@ const normalizePlayerName = (name: string): string => {
 
 const App: React.FC = () => {
   const [showEntry, setShowEntry] = useState(true);
-  const [activeTab, setActiveTab] = useState<'kills' | 'earnings' | 'ffwsbr' | 'standings'>('kills');
+  const [activeTab, setActiveTab] = useState<'kills' | 'earnings' | 'ffwsbr' | 'standings' | 'laff'>('kills');
   const [wbSubTab, setWbSubTab] = useState<WBSubTab>('general'); // Default to General as requested
   const [splitFilter, setSplitFilter] = useState<SplitFilter>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -389,7 +402,7 @@ const App: React.FC = () => {
 
 
   const handlePlayerClick = (player: any) => {
-    if (activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'standings') {
+    if (activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff') {
       setSelectedPlayer(player);
     }
   };
@@ -405,6 +418,7 @@ const App: React.FC = () => {
   const getCurrentData = () => {
       if (activeTab === 'earnings') return EARNING_STATS;
       if (activeTab === 'ffwsbr') return mergedFFWSData;
+      if (activeTab === 'laff') return LAFF_STATS;
       return killStats;
   };
 
@@ -473,6 +487,17 @@ const App: React.FC = () => {
                     Jogadores WB
                   </button>
                   <button 
+                    onClick={() => setActiveTab('laff')}
+                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'laff' 
+                      ? 'bg-gradient-to-b from-slate-800 to-black text-orange-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-orange-500/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Crosshair className={`w-4 h-4 ${activeTab === 'laff' ? 'text-orange-500' : ''}`} />
+                    LAFF
+                  </button>
+                  <button 
                      onClick={() => setActiveTab('earnings')}
                      className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
                       activeTab === 'earnings' 
@@ -517,7 +542,7 @@ const App: React.FC = () => {
                   </button>
 
                   {/* Comparison Button */}
-                  {(activeTab === 'kills' || activeTab === 'ffwsbr') && (
+                  {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff') && (
                     <button 
                       onClick={() => setIsComparisonOpen(true)}
                       className="group relative px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all duration-200 overflow-hidden"
@@ -564,6 +589,14 @@ const App: React.FC = () => {
                     <Globe className="w-5 h-5" /> Jogadores WB
                   </button>
                   <button 
+                    onClick={() => { setActiveTab('laff'); setMobileMenuOpen(false); }}
+                    className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
+                      activeTab === 'laff' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'text-slate-300'
+                    }`}
+                  >
+                    <Crosshair className="w-5 h-5" /> LAFF
+                  </button>
+                  <button 
                      onClick={() => { setActiveTab('earnings'); setMobileMenuOpen(false); }}
                      className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
                       activeTab === 'earnings' ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' : 'text-slate-300'
@@ -583,7 +616,7 @@ const App: React.FC = () => {
                      <button onClick={() => { setShowEntry(true); setMobileMenuOpen(false); }} className="flex-1 py-2 bg-white/5 rounded text-sm">Início</button>
                      <button onClick={() => { handleAdminToggle(); setMobileMenuOpen(false); }} className={`flex-1 py-2 rounded text-sm ${isAdmin ? 'bg-amber-600' : 'bg-white/5'}`}>{isAdmin ? 'Sair Admin' : 'Admin'}</button>
                   </div>
-                  {(activeTab === 'kills' || activeTab === 'ffwsbr') && (
+                  {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff') && (
                     <button 
                       onClick={() => { setIsComparisonOpen(true); setMobileMenuOpen(false); }}
                       className="mt-4 w-full px-4 py-3 rounded-lg text-base font-medium bg-indigo-600 text-white flex items-center gap-3 justify-center"
@@ -613,6 +646,10 @@ const App: React.FC = () => {
                     <>
                        Jogadores <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">WB</span>
                     </>
+                  ) : activeTab === 'laff' ? (
+                    <>
+                       Ranking <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">LAFF</span>
+                    </>
                   ) : activeTab === 'standings' ? (
                      <>
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">FFWSBR</span>
@@ -628,6 +665,8 @@ const App: React.FC = () => {
                     ? 'Ranking oficial da LBFF Série A. Analise o desempenho histórico das maiores lendas do cenário competitivo.'
                     : activeTab === 'ffwsbr'
                     ? 'Hub oficial de estatísticas dos Jogadores WB. Dados combinados e segmentados por temporada.'
+                    : activeTab === 'laff'
+                    ? 'Classificação de abates da Liga Amadora de Free Fire (LAFF).'
                     : activeTab === 'standings'
                     ? 'Tabelas de classificação oficiais atualizadas de todas as edições do FFWS Brasil.'
                     : 'Monitoramento em tempo real das premiações globais e valores de mercado dos pro-players.'
@@ -748,7 +787,7 @@ const App: React.FC = () => {
             {/* Sidebar (Hide in Profile View and Standings to give full width) */}
             {(activeTab !== 'standings' && (activeTab !== 'ffwsbr' || wbSubTab !== 'profile')) && (
               <StatsPanel 
-                killsData={activeTab === 'ffwsbr' ? mergedFFWSData : killStats} 
+                killsData={activeTab === 'ffwsbr' ? mergedFFWSData : activeTab === 'laff' ? LAFF_STATS : killStats} 
                 earningsData={EARNING_STATS} 
                 activeTab={activeTab as any}
               />
@@ -766,7 +805,7 @@ const App: React.FC = () => {
              </div>
              <p className="text-slate-500 text-sm">
                &copy; 2024 JhanStats.
-               {activeTab === 'ffwsbr' || activeTab === 'standings' ? (
+               {activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff' ? (
                   <> Dados tratados por <span className="text-slate-400 font-medium">Jhan</span>.</>
                ) : (
                   <> Dados fornecidos por <span className="text-slate-400 font-medium">Liquipedia</span>.</>
@@ -788,7 +827,7 @@ const App: React.FC = () => {
         <ComparisonModal 
           isOpen={isComparisonOpen}
           onClose={() => setIsComparisonOpen(false)}
-          players={activeTab === 'ffwsbr' ? mergedFFWSData : killStats}
+          players={activeTab === 'ffwsbr' ? mergedFFWSData : activeTab === 'laff' ? LAFF_STATS : killStats}
           activeWbTab={wbSubTab === 'profile' ? 'general' : wbSubTab} 
         />
 

@@ -10,17 +10,19 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ onEnter }) => {
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowButton(true), 1500);
+    // Reduced time to show button
+    const timer = setTimeout(() => setShowButton(true), 800);
     return () => clearTimeout(timer);
   }, []);
 
   const handleEnter = () => {
     setIsExiting(true);
-    setTimeout(onEnter, 800); // Wait for exit animation
+    // Reduced exit duration
+    setTimeout(onEnter, 500); 
   };
 
   return (
-    <div className={`fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center transition-all duration-700 ease-in-out ${isExiting ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100'}`}>
+    <div className={`fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${isExiting ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100'}`}>
       
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -51,7 +53,7 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ onEnter }) => {
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center gap-2 mt-2 mb-6 px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-amber-500/50 transition-all duration-300 group opacity-0 animate-fade-in"
-          style={{animationDelay: '0.6s', animationFillMode: 'forwards'}}
+          style={{animationDelay: '0.4s', animationFillMode: 'forwards'}}
         >
            <Instagram className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
            <span className="text-slate-200 text-sm md:text-base font-semibold">
@@ -60,7 +62,7 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ onEnter }) => {
         </a>
         
         {/* Enter Button */}
-        <div className={`mt-10 transition-all duration-700 transform ${showButton ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+        <div className={`mt-10 transition-all duration-500 transform ${showButton ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
           <button 
             onClick={handleEnter}
             className="group relative px-8 py-4 bg-white text-black font-bold text-sm tracking-widest uppercase rounded-full overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)]"

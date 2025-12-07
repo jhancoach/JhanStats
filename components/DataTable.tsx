@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { KillStat, EarningStat, SortConfig } from '../types';
-import { ArrowUpDown, Download, Search, Trophy, TrendingUp, Filter, ChevronDown, Pencil, Globe } from 'lucide-react';
+import { ArrowUpDown, Download, Search, Trophy, TrendingUp, Filter, ChevronDown, Pencil, Globe, Crosshair } from 'lucide-react';
 import { WBSubTab, SplitFilter } from '../App';
 
 interface DataTableProps {
   data: any[];
-  type: 'kills' | 'earnings' | 'ffwsbr';
+  type: 'kills' | 'earnings' | 'ffwsbr' | 'laff';
   subTab?: WBSubTab;
   splitFilter?: SplitFilter;
   onPlayerClick?: (player: any) => void;
@@ -23,10 +23,11 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
 
   const isKills = type === 'kills';
   const isFFWS = type === 'ffwsbr';
+  const isLaff = type === 'laff';
   
   // Dynamic colors based on type
-  const accentColor = isFFWS ? "text-indigo-400" : isKills ? "text-amber-400" : "text-cyan-400";
-  const glowColor = isFFWS ? "shadow-indigo-500/20" : isKills ? "shadow-amber-500/20" : "shadow-cyan-500/20";
+  const accentColor = isFFWS ? "text-indigo-400" : isLaff ? "text-orange-400" : isKills ? "text-amber-400" : "text-cyan-400";
+  const glowColor = isFFWS ? "shadow-indigo-500/20" : isLaff ? "shadow-orange-500/20" : isKills ? "shadow-amber-500/20" : "shadow-cyan-500/20";
 
   const seasonOptions = [
     { value: 'all', label: 'Todas as Temporadas' },
@@ -44,41 +45,59 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
     { value: 'wb2025s2', label: 'WB 2025 S2' },
   ];
 
-  // Process data to include WB Total (Only for Main Kills Tab as legacy calc)
+  // Process data to include WB Total and Calculations
   const processedData = useMemo(() => {
-    if (type !== 'kills') return data;
     return data.map(item => {
-      const wbCols = ['wb2024s1', 'wb2024s2', 'wb2025s1', 'wb2025s2'];
-      let kills = 0;
-      let matches = 0;
+      const newItem = { ...item };
 
-      wbCols.forEach(key => {
-        const val = item[key];
-        if (val && val !== '- (-)') {
-          const parts = val.split(' (');
-          kills += parseInt(parts[0], 10) || 0;
-          matches += parseInt(parts[1]?.replace(')', ''), 10) || 0;
-        }
-      });
+      // WB Total logic for 'kills' type (Legacy)
+      if (type === 'kills') {
+        const wbCols = ['wb2024s1', 'wb2024s2', 'wb2025s1', 'wb2025s2'];
+        let kills = 0;
+        let matches = 0;
 
-      return {
-        ...item,
-        wb_total: `${kills} (${matches})`,
-        wb_total_val: kills
-      };
+        wbCols.forEach(key => {
+          const val = item[key];
+          if (val && val !== '- (-)') {
+            const parts = val.split(' (');
+            kills += parseInt(parts[0], 10) || 0;
+            matches += parseInt(parts[1]?.replace(')', ''), 10) || 0;
+          }
+        });
+
+        newItem.wb_total = `${kills} (${matches})`;
+        newItem.wb_total_val = kills;
+      }
+
+      // Calculate Average Knockdowns (Média Derrubados)
+      if (newItem.knockdowns !== undefined) {
+          const m = newItem.matches || 0;
+          newItem.kd_avg = m > 0 ? (newItem.knockdowns / m).toFixed(2) : "0.00";
+      }
+
+      return newItem;
     });
   }, [data, type]);
 
   // Columns Configuration
   const columns = useMemo(() => {
     let cols = [];
-    if (isFFWS) {
+    if (isLaff) {
+        cols = [
+            { key: 'rank', label: '#', width: 'w-16 min-w-[60px]', sticky: true },
+            { key: 'player', label: 'Jogador', width: 'w-56 min-w-[200px]', sticky: true },
+            { key: 'team', label: 'Equipe', width: 'w-48 min-w-[150px]' },
+            { key: 'totalKills', label: 'Abates', width: 'w-32 min-w-[120px]', highlight: true },
+            { key: 'matches', label: 'Quedas', width: 'w-28 min-w-[100px]' },
+            { key: 'kpg', label: 'Média (KPG)', width: 'w-24 min-w-[90px]' },
+        ];
+    } else if (isFFWS) {
          cols = [
             { key: 'rank', label: '#', width: 'w-16 min-w-[60px]', sticky: true },
             { key: 'player', label: 'Jogador', width: 'w-48 min-w-[150px]', sticky: true },
             { key: 'totalKills', label: 'Total Abates', width: 'w-24 min-w-[80px]', highlight: true },
             { key: 'matches', label: 'Quedas', width: 'w-24 min-w-[80px]' },
-            { key: 'kpg', label: 'Média', width: 'w-24 min-w-[80px]' }, // Added Average Column
+            { key: 'kpg', label: 'Média', width: 'w-24 min-w-[80px]' },
          ];
 
          // Visibility Logic for Columns based on Split Filter and Year Tab
@@ -105,6 +124,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
          cols.push(
             { key: 'headshots', label: 'Capas', width: 'w-24 min-w-[80px]' },
             { key: 'knockdowns', label: 'Derrubados', width: 'w-28 min-w-[100px]' },
+            { key: 'kd_avg', label: 'Média Derr.', width: 'w-24 min-w-[90px]' },
             { key: 'gloowalls', label: 'Gelos', width: 'w-24 min-w-[80px]' },
             { key: 'gloowallsDestroyed', label: 'Gelos Destr.', width: 'w-28 min-w-[100px]' },
             { key: 'revives', label: 'Reviveu', width: 'w-24 min-w-[80px]' },
@@ -145,12 +165,12 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
     }
     
     // Add Admin Edit Column if active and is Kills or FFWS
-    if (isAdmin && (isKills || isFFWS)) {
+    if (isAdmin && (isKills || isFFWS || isLaff)) {
       cols.push({ key: 'actions', label: 'Admin', width: 'w-16 text-center', sticky: false });
     }
 
     return cols;
-  }, [isKills, isFFWS, isAdmin, subTab, splitFilter]);
+  }, [isKills, isFFWS, isLaff, isAdmin, subTab, splitFilter]);
 
   const sortedAndFilteredData = useMemo(() => {
     let output = [...processedData];
@@ -176,6 +196,12 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
         if (sortConfig.key === 'wb_total') {
             valA = a.wb_total_val;
             valB = b.wb_total_val;
+        }
+
+        // Handle numeric sorting for KD Average which is a string
+        if (sortConfig.key === 'kd_avg') {
+            valA = parseFloat(valA || '0');
+            valB = parseFloat(valB || '0');
         }
 
         if (valA === undefined || valA === '-') return 1;
@@ -272,6 +298,11 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
         </div>
 
         <div className="flex gap-3 w-full xl:w-auto justify-between xl:justify-end">
+          {isLaff && (
+              <div className="hidden sm:flex items-center text-xs text-orange-400/80 bg-orange-500/5 px-4 py-2 rounded-full border border-orange-500/10 whitespace-nowrap">
+                  <Crosshair className="w-3 h-3 mr-1.5" /> Liga Amadora FF
+              </div>
+          )}
           {isFFWS && (
               <div className="hidden sm:flex items-center text-xs text-indigo-400/80 bg-indigo-500/5 px-4 py-2 rounded-full border border-indigo-500/10 whitespace-nowrap">
                   <Globe className="w-3 h-3 mr-1.5" /> Dados Completos FFWSBR
@@ -300,7 +331,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
               {columns.map((col, index) => (
                 <th 
                   key={col.key} 
-                  className={`px-6 py-5 cursor-pointer hover:text-white hover:bg-white/5 transition-all border-b border-white/5 ${col.width} ${col.sticky ? 'sticky z-20 bg-slate-950/80 backdrop-blur-xl' : ''} ${ (col as any).highlight ? (isFFWS ? 'text-indigo-400' : 'text-indigo-400') : ''} ${ (col as any).special ? 'text-emerald-400 bg-emerald-500/5' : ''}`}
+                  className={`px-6 py-5 cursor-pointer hover:text-white hover:bg-white/5 transition-all border-b border-white/5 ${col.width} ${col.sticky ? 'sticky z-20 bg-slate-950/80 backdrop-blur-xl' : ''} ${ (col as any).highlight ? (isFFWS ? 'text-indigo-400' : isLaff ? 'text-orange-400' : 'text-indigo-400') : ''} ${ (col as any).special ? 'text-emerald-400 bg-emerald-500/5' : ''}`}
                   style={col.sticky ? { left: index === 0 ? 0 : '70px', boxShadow: index > 0 ? '4px 0 10px -2px rgba(0,0,0,0.3)' : 'none' } : {}}
                   onClick={() => col.key !== 'actions' && requestSort(col.key)}
                 >
@@ -321,7 +352,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
             {sortedAndFilteredData.map((row, idx) => (
               <tr 
                 key={idx} 
-                className={`group hover:bg-white/[0.03] transition-colors duration-150 ease-in-out`}
+                className={`group hover:bg-white/[0.03] transition-colors duration-75 ease-in-out`}
               >
                 {columns.map((col, index) => {
                   const val = row[col.key];
@@ -332,12 +363,12 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
                   const isMedal = ['gold', 'silver', 'bronze', 's_tier'].includes(col.key as string);
                   const isAction = col.key === 'actions';
                   const isSpecial = (col as any).special;
-                  const isAverage = col.key === 'kpg';
+                  const isAverage = col.key === 'kpg' || col.key === 'kd_avg'; // UPDATED to include kd_avg
 
                   return (
                     <td 
                       key={col.key} 
-                      className={`px-6 py-4 text-slate-300 ${col.sticky ? 'sticky left-0 z-10 bg-[#0A0A0A] group-hover:bg-[#121212] transition-colors duration-150 ease-in-out' : ''} ${isSpecial ? 'bg-emerald-500/5 group-hover:bg-emerald-500/10 text-emerald-300 font-mono font-bold' : ''}`}
+                      className={`px-6 py-4 text-slate-300 ${col.sticky ? 'sticky left-0 z-10 bg-[#0A0A0A] group-hover:bg-[#121212] transition-colors duration-75 ease-in-out' : ''} ${isSpecial ? 'bg-emerald-500/5 group-hover:bg-emerald-500/10 text-emerald-300 font-mono font-bold' : ''}`}
                       style={col.sticky ? { left: index === 0 ? 0 : '70px', boxShadow: index > 0 ? '4px 0 10px -2px rgba(0,0,0,0.3)' : 'none' } : {}}
                     >
                       {isAction ? (
@@ -371,7 +402,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
                         </div>
                       ) : isMainMetric ? (
                         <div className={`font-mono font-bold text-lg tracking-tight ${accentColor} drop-shadow-[0_0_10px_rgba(0,0,0,0.5)] ${col.key === 'earnings' ? 'text-right' : ''}`}>
-                          {isKills || isFFWS ? val : `$${val.toLocaleString()}`}
+                          {isKills || isFFWS || isLaff ? val : `$${val.toLocaleString()}`}
                         </div>
                       ) : isWBTotal ? (
                          <span className="font-mono font-bold text-xs text-indigo-300 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.1)]">{val}</span>
