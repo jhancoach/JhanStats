@@ -4,8 +4,7 @@ import { Crosshair, DollarSign, Crown, TrendingUp, Globe, Swords, Target, Clock,
 
 interface StatsPanelProps {
   killsData: KillStat[];
-  earningsData: EarningStat[];
-  activeTab: 'kills' | 'earnings' | 'ffwsbr' | 'laff';
+  activeTab: 'kills' | 'ffwsbr' | 'laff';
 }
 
 const StatCard = ({ title, value, sub, icon: Icon, colorClass, gradient }: any) => (
@@ -62,13 +61,8 @@ const Top3List = ({ title, data, metricKey, label, icon: Icon, colorClass, value
   </div>
 );
 
-export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData, activeTab }) => {
+export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, activeTab }) => {
   
-  // Logic for Earnings Tab (Unchanged)
-  const top10Earnings = earningsData.slice(0, 10);
-  const totalEarningsTop10 = top10Earnings.reduce((acc, curr) => acc + curr.earnings, 0);
-  const richestPlayer = earningsData[0];
-
   // Helper to identify WB Active Players and calculate WB Total Kills
   const getWBInfo = (p: KillStat) => {
       const wbCols = ['wb2024s1', 'wb2024s2', 'wb2025s1', 'wb2025s2'];
@@ -131,83 +125,49 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ killsData, earningsData,
              Ranking da <span className="text-orange-400 font-semibold">Liga Amadora</span>. <br/>Tabela de Abates e Estatísticas Gerais.
            </p>
          )}
-         {activeTab === 'earnings' && (
-           <p className="text-xs text-slate-400/80 mb-6 pl-1 border-l-2 border-indigo-500/50">
-             Ranking financeiro via <span className="text-white font-semibold">Liquipedia</span>. <br/>Valores acumulados em torneios oficiais.
-           </p>
-         )}
        </div>
 
-       {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff') ? (
-         <>
-            {/* Top 3 Total Kills */}
-            <Top3List 
-              title={activeTab === 'ffwsbr' ? "MVP FFWSBR" : activeTab === 'laff' ? "MVP LAFF" : "Reis do Abate"}
-              data={top3TotalKills} 
-              metricKey="totalKills" 
-              label="Total Kills"
-              icon={Swords}
-              colorClass={activeTab === 'laff' ? "text-orange-400" : "text-amber-400"}
-            />
+       {/* Top 3 Total Kills */}
+       <Top3List 
+         title={activeTab === 'ffwsbr' ? "MVP FFWSBR" : activeTab === 'laff' ? "MVP LAFF" : "Reis do Abate"}
+         data={top3TotalKills} 
+         metricKey="totalKills" 
+         label="Total Kills"
+         icon={Swords}
+         colorClass={activeTab === 'laff' ? "text-orange-400" : "text-amber-400"}
+       />
 
-            {/* Top 3 Average */}
-            <Top3List 
-              title="Maior Impacto (Média)" 
-              data={top3Avg} 
-              metricKey="kpg" 
-              label="Kills / Jogo"
-              icon={Target}
-              colorClass="text-red-400"
-            />
+       {/* Top 3 Average */}
+       <Top3List 
+         title="Maior Impacto (Média)" 
+         data={top3Avg} 
+         metricKey="kpg" 
+         label="Kills / Jogo"
+         icon={Target}
+         colorClass="text-red-400"
+       />
 
-            {/* Top 3 WB Kills - Only show in normal tab, redundant in others */}
-            {activeTab === 'kills' && (
-                <Top3List 
-                title="Lendas World Series" 
-                data={top3WBKills} 
-                metricKey="wbTotalKills" 
-                label="WB Kills"
-                icon={Globe}
-                colorClass="text-indigo-400"
-                />
-            )}
-
-            {/* Top 3 Matches */}
-            <Top3List 
-              title={activeTab === 'ffwsbr' || activeTab === 'laff' ? "Mais Ativos" : "Veteranos (Partidas)"}
-              data={top3Matches} 
-              metricKey="matches" 
-              label="Jogos"
-              icon={Clock}
-              colorClass="text-blue-400"
-            />
-         </>
-       ) : (
-         <>
-            <StatCard 
-              title="Maior Ganhador" 
-              value={`$${(richestPlayer.earnings / 1000).toFixed(0)}k`} 
-              sub={`${richestPlayer.player}`} 
-              icon={Crown} 
-              colorClass="text-cyan-400" 
-              gradient="bg-gradient-to-r from-cyan-500 to-blue-600"
-            />
-            <StatCard 
-              title="Acumulado Top 10" 
-              value={`$${(totalEarningsTop10 / 1000000).toFixed(2)}M`} 
-              sub="Premiação Combinada" 
-              icon={DollarSign} 
-              colorClass="text-emerald-400" 
-              gradient="bg-gradient-to-r from-emerald-500 to-green-600"
-            />
-            <div className="glass-panel p-5 rounded-2xl border-l-2 border-emerald-500/50">
-              <h5 className="text-xs font-bold text-white uppercase tracking-widest mb-2">Market Share</h5>
-              <div className="text-xs text-slate-400 leading-relaxed">
-                O top 5 concentra <span className="text-emerald-400 font-bold">40%</span> de todo o capital listado, indicando alta concentração de prêmios no topo da tabela.
-              </div>
-            </div>
-         </>
+       {/* Top 3 WB Kills - Only show in normal tab, redundant in others */}
+       {activeTab === 'kills' && (
+           <Top3List 
+           title="Lendas World Series" 
+           data={top3WBKills} 
+           metricKey="wbTotalKills" 
+           label="WB Kills"
+           icon={Globe}
+           colorClass="text-indigo-400"
+           />
        )}
+
+       {/* Top 3 Matches */}
+       <Top3List 
+         title={activeTab === 'ffwsbr' || activeTab === 'laff' ? "Mais Ativos" : "Veteranos (Partidas)"}
+         data={top3Matches} 
+         metricKey="matches" 
+         label="Jogos"
+         icon={Clock}
+         colorClass="text-blue-400"
+       />
     </aside>
   );
 };

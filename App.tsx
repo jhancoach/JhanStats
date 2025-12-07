@@ -7,23 +7,11 @@ import { PlayerProgressionModal } from './components/PlayerProgressionModal';
 import { ComparisonModal } from './components/ComparisonModal';
 import { PlayerProfileView } from './components/PlayerProfileView';
 import { StandingsView } from './components/StandingsView';
+import { ScoutView } from './components/ScoutView';
 import { EntryScreen } from './components/EntryScreen';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
-import { Skull, DollarSign, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair } from 'lucide-react';
-
-const EARNING_STATS: EarningStat[] = [
-  { rank: 1, player: "Nobru", earnings: 245000, gold: 1, silver: 0, bronze: 1, s_tier: 5, team: "Fluxo" },
-  { rank: 2, player: "Kronos", earnings: 210000, gold: 2, silver: 0, bronze: 0, s_tier: 3, team: "LOUD" },
-  { rank: 3, player: "Yago", earnings: 185000, gold: 1, silver: 1, bronze: 0, s_tier: 4, team: "LOUD" },
-  { rank: 4, player: "Cauan", earnings: 175000, gold: 1, silver: 1, bronze: 0, s_tier: 4, team: "LOUD" },
-  { rank: 5, player: "Lost", earnings: 160000, gold: 1, silver: 0, bronze: 1, s_tier: 3, team: "LOUD" },
-  { rank: 6, player: "Draxx", earnings: 150000, gold: 1, silver: 0, bronze: 0, s_tier: 2, team: "Magic Squad" },
-  { rank: 7, player: "Syaz", earnings: 140000, gold: 0, silver: 1, bronze: 1, s_tier: 3, team: "Fluxo" },
-  { rank: 8, player: "Ousado", earnings: 130000, gold: 0, silver: 1, bronze: 0, s_tier: 2, team: "Fluxo" },
-  { rank: 9, player: "Modestia", earnings: 120000, gold: 0, silver: 0, bronze: 2, s_tier: 3, team: "Vivo Keyd" },
-  { rank: 10, player: "Deadgod", earnings: 110000, gold: 0, silver: 0, bronze: 2, s_tier: 3, team: "Vivo Keyd" }
-];
+import { Skull, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair, Radar } from 'lucide-react';
 
 // New Split CSV Links
 const WB_2024_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYc8m8JZnDeFr3FeN97I4NJwwuc0P1uN8v6JEv06_OflL5QCr_4t75yOe-xkqC9TnS3Cf-tRLT4aDZ/pub?output=csv';
@@ -31,7 +19,7 @@ const WB_2024_S2_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNiiD9B
 const WB_2025_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuAwNL2Ua0wcDHioiHDxxdNajprbptsOm1UdUNo4EoK-XyVzFYPrVYT_3WjMt2xZykLlaDh93L7TkR/pub?output=csv';
 const WB_2025_S2_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRoO1Pp7JVxMOkf29n3_A4LYISkXrkqglqsL9ajgw68igKnk_7TtUXaLFJuJZ4whzaRpWD2akh8YeK9/pub?output=csv';
 
-export type WBSubTab = 'wb2024' | 'wb2025' | 'general' | 'profile';
+export type WBSubTab = 'wb2024' | 'wb2025' | 'general' | 'profile' | 'scout';
 export type SplitFilter = 'all' | 's1' | 's2' | 'wb24s1' | 'wb24s2' | 'wb25s1' | 'wb25s2';
 
 // Helper function for name normalization (Moved outside component for reuse)
@@ -59,7 +47,7 @@ const normalizePlayerName = (name: string): string => {
 
 const App: React.FC = () => {
   const [showEntry, setShowEntry] = useState(true);
-  const [activeTab, setActiveTab] = useState<'kills' | 'earnings' | 'ffwsbr' | 'standings' | 'laff'>('kills');
+  const [activeTab, setActiveTab] = useState<'kills' | 'ffwsbr' | 'standings' | 'laff'>('kills');
   const [wbSubTab, setWbSubTab] = useState<WBSubTab>('general'); // Default to General as requested
   const [splitFilter, setSplitFilter] = useState<SplitFilter>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -180,8 +168,8 @@ const App: React.FC = () => {
       let datasets: KillStat[][] = [];
 
       // Determine datasets based on active tab AND split filter
-      // For 'profile' tab, we want all data available to search
-      if (wbSubTab === 'general' || wbSubTab === 'profile') {
+      // For 'profile' and 'scout' tab, we want all data available to search
+      if (wbSubTab === 'general' || wbSubTab === 'profile' || wbSubTab === 'scout') {
           if (splitFilter === 'all') datasets = [raw24s1, raw24s2, raw25s1, raw25s2];
           else if (splitFilter === 'wb24s1') datasets = [raw24s1];
           else if (splitFilter === 'wb24s2') datasets = [raw24s2];
@@ -227,8 +215,6 @@ const App: React.FC = () => {
                   existing.alliesRevived = (existing.alliesRevived || 0) + (p.alliesRevived || 0);
 
                   // Accumulate split specific totals regardless of filter (for chart context, etc)
-                  // Note: Since 'datasets' only contains what we want to show in Total/Rank,
-                  // we still want to preserve the specific split data properties if they exist on 'p'
                   existing.kills24s1 = (existing.kills24s1 || 0) + (p.kills24s1 || 0);
                   existing.kills24s2 = (existing.kills24s2 || 0) + (p.kills24s2 || 0);
                   existing.kills25s1 = (existing.kills25s1 || 0) + (p.kills25s1 || 0);
@@ -255,7 +241,7 @@ const App: React.FC = () => {
           .sort((a, b) => b.totalKills - a.totalKills)
           .map((p, i) => ({ ...p, rank: i + 1 }));
 
-  }, [raw24s1, raw24s2, raw25s1, raw25s2, wbSubTab, splitFilter]);
+  }, [raw24s1, raw24s2, raw25s1, raw25s2, wbSubTab, splitFilter, activeTab]);
 
   // Specific Data for Standings View (WB 2024 S1 Players)
   const wb2024S1Players = useMemo(() => {
@@ -416,7 +402,6 @@ const App: React.FC = () => {
   };
 
   const getCurrentData = () => {
-      if (activeTab === 'earnings') return EARNING_STATS;
       if (activeTab === 'ffwsbr') return mergedFFWSData;
       if (activeTab === 'laff') return LAFF_STATS;
       return killStats;
@@ -476,7 +461,7 @@ const App: React.FC = () => {
                     Mais Abates
                   </button>
                   <button 
-                    onClick={() => setActiveTab('ffwsbr')}
+                    onClick={() => { setActiveTab('ffwsbr'); setWbSubTab('general'); }}
                     className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
                       activeTab === 'ffwsbr' 
                       ? 'bg-gradient-to-b from-slate-800 to-black text-indigo-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-indigo-500/20' 
@@ -496,17 +481,6 @@ const App: React.FC = () => {
                   >
                     <Crosshair className={`w-4 h-4 ${activeTab === 'laff' ? 'text-orange-500' : ''}`} />
                     LAFF
-                  </button>
-                  <button 
-                     onClick={() => setActiveTab('earnings')}
-                     className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
-                      activeTab === 'earnings' 
-                      ? 'bg-gradient-to-b from-slate-800 to-black text-cyan-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-cyan-500/20' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <DollarSign className={`w-4 h-4 ${activeTab === 'earnings' ? 'text-cyan-500' : ''}`} />
-                    Ganhos
                   </button>
                   <button 
                      onClick={() => setActiveTab('standings')}
@@ -581,7 +555,7 @@ const App: React.FC = () => {
                     <Skull className="w-5 h-5" /> Mais Abates
                   </button>
                   <button 
-                    onClick={() => { setActiveTab('ffwsbr'); setMobileMenuOpen(false); }}
+                    onClick={() => { setActiveTab('ffwsbr'); setWbSubTab('general'); setMobileMenuOpen(false); }}
                     className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
                       activeTab === 'ffwsbr' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' : 'text-slate-300'
                     }`}
@@ -595,14 +569,6 @@ const App: React.FC = () => {
                     }`}
                   >
                     <Crosshair className="w-5 h-5" /> LAFF
-                  </button>
-                  <button 
-                     onClick={() => { setActiveTab('earnings'); setMobileMenuOpen(false); }}
-                     className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
-                      activeTab === 'earnings' ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' : 'text-slate-300'
-                    }`}
-                  >
-                    <DollarSign className="w-5 h-5" /> Ganhos
                   </button>
                   <button 
                      onClick={() => { setActiveTab('standings'); setMobileMenuOpen(false); }}
@@ -650,14 +616,10 @@ const App: React.FC = () => {
                     <>
                        Ranking <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">LAFF</span>
                     </>
-                  ) : activeTab === 'standings' ? (
+                  ) : (
                      <>
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">FFWSBR</span>
                      </>
-                  ) : (
-                    <>
-                      Elite dos <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Ganhos</span>
-                    </>
                   )}
                 </h1>
                 <p className="text-slate-400 max-w-2xl text-lg leading-relaxed">
@@ -667,9 +629,7 @@ const App: React.FC = () => {
                     ? 'Hub oficial de estatísticas dos Jogadores WB. Dados combinados e segmentados por temporada.'
                     : activeTab === 'laff'
                     ? 'Classificação de abates da Liga Amadora de Free Fire (LAFF).'
-                    : activeTab === 'standings'
-                    ? 'Tabelas de classificação oficiais atualizadas de todas as edições do FFWS Brasil.'
-                    : 'Monitoramento em tempo real das premiações globais e valores de mercado dos pro-players.'
+                    : 'Tabelas de classificação oficiais atualizadas de todas as edições do FFWS Brasil.'
                   }
                 </p>
               </div>
@@ -713,10 +673,16 @@ const App: React.FC = () => {
                     >
                         <User className="w-4 h-4" /> PERFIL DO JOGADOR
                     </button>
+                    <button
+                        onClick={() => setWbSubTab('scout')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${wbSubTab === 'scout' ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25 ring-1 ring-violet-400' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        <Radar className="w-4 h-4" /> SCOUT
+                    </button>
                 </div>
 
-                {/* Split Filters (Hide in Profile mode) */}
-                {wbSubTab !== 'profile' && (
+                {/* Split Filters (Hide in Profile and Scout mode) */}
+                {(wbSubTab !== 'profile' && wbSubTab !== 'scout') && (
                   <div className="flex items-center gap-2 px-4 py-3 bg-white/5 rounded-xl border border-white/5 w-fit">
                       <Filter className="w-4 h-4 text-slate-500 mr-2" />
                       
@@ -765,14 +731,16 @@ const App: React.FC = () => {
                   </div>
               ) : (
                   <>
-                    {/* Render Profile View if selected subtab is profile */}
+                    {/* Render Content based on subtab */}
                     {activeTab === 'ffwsbr' && wbSubTab === 'profile' ? (
                        <PlayerProfileView players={mergedFFWSData} />
+                    ) : activeTab === 'ffwsbr' && wbSubTab === 'scout' ? (
+                        <ScoutView allPlayers={mergedFFWSData} />
                     ) : activeTab !== 'standings' && (
                        <DataTable 
                           key={`${activeTab}-${wbSubTab}-${splitFilter}`} 
                           type={activeTab as any}
-                          subTab={wbSubTab === 'profile' ? 'general' : wbSubTab}
+                          subTab={wbSubTab === 'profile' ? 'general' : wbSubTab === 'scout' ? 'general' : wbSubTab}
                           splitFilter={splitFilter}
                           data={getCurrentData()}
                           onPlayerClick={handlePlayerClick}
@@ -784,11 +752,10 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* Sidebar (Hide in Profile View and Standings to give full width) */}
-            {(activeTab !== 'standings' && (activeTab !== 'ffwsbr' || wbSubTab !== 'profile')) && (
+            {/* Sidebar (Hide in Profile View, Scout and Standings to give full width) */}
+            {(activeTab !== 'standings' && (activeTab !== 'ffwsbr' || (wbSubTab !== 'profile' && wbSubTab !== 'scout'))) && (
               <StatsPanel 
                 killsData={activeTab === 'ffwsbr' ? mergedFFWSData : activeTab === 'laff' ? LAFF_STATS : killStats} 
-                earningsData={EARNING_STATS} 
                 activeTab={activeTab as any}
               />
             )}
@@ -828,7 +795,7 @@ const App: React.FC = () => {
           isOpen={isComparisonOpen}
           onClose={() => setIsComparisonOpen(false)}
           players={activeTab === 'ffwsbr' ? mergedFFWSData : activeTab === 'laff' ? LAFF_STATS : killStats}
-          activeWbTab={wbSubTab === 'profile' ? 'general' : wbSubTab} 
+          activeWbTab={wbSubTab === 'profile' || wbSubTab === 'scout' ? 'general' : wbSubTab} 
         />
 
         {/* Admin Login Modal */}

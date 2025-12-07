@@ -5,7 +5,7 @@ import { WBSubTab, SplitFilter } from '../App';
 
 interface DataTableProps {
   data: any[];
-  type: 'kills' | 'earnings' | 'ffwsbr' | 'laff';
+  type: 'kills' | 'ffwsbr' | 'laff';
   subTab?: WBSubTab;
   splitFilter?: SplitFilter;
   onPlayerClick?: (player: any) => void;
@@ -17,7 +17,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
   const [filter, setFilter] = useState('');
   const [seasonFilter, setSeasonFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig<any>>({
-    key: type === 'earnings' ? 'earnings' : 'totalKills',
+    key: 'totalKills',
     direction: 'desc',
   });
 
@@ -26,8 +26,8 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
   const isLaff = type === 'laff';
   
   // Dynamic colors based on type
-  const accentColor = isFFWS ? "text-indigo-400" : isLaff ? "text-orange-400" : isKills ? "text-amber-400" : "text-cyan-400";
-  const glowColor = isFFWS ? "shadow-indigo-500/20" : isLaff ? "shadow-orange-500/20" : isKills ? "shadow-amber-500/20" : "shadow-cyan-500/20";
+  const accentColor = isFFWS ? "text-indigo-400" : isLaff ? "text-orange-400" : "text-amber-400";
+  const glowColor = isFFWS ? "shadow-indigo-500/20" : isLaff ? "shadow-orange-500/20" : "shadow-amber-500/20";
 
   const seasonOptions = [
     { value: 'all', label: 'Todas as Temporadas' },
@@ -82,6 +82,10 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
   // Columns Configuration
   const columns = useMemo(() => {
     let cols = [];
+    
+    // Check if the data is LAFF event (used for fallback in kills tab)
+    const isLaffData = data.length > 0 && data[0].events === 'LAFF';
+
     if (isLaff) {
         cols = [
             { key: 'rank', label: '#', width: 'w-16 min-w-[60px]', sticky: true },
@@ -131,37 +135,40 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
             { key: 'alliesRevived', label: 'Aliados Rev.', width: 'w-28 min-w-[100px]' },
          );
 
-    } else if (isKills) {
-      cols = [
-        { key: 'rank', label: '#', width: 'w-16 min-w-[70px]', sticky: true },
-        { key: 'player', label: 'Jogador', width: 'w-56 min-w-[200px]', sticky: true },
-        { key: 'totalKills', label: 'Abates', width: 'w-32 min-w-[120px]' },
-        { key: 'matches', label: 'Partidas', width: 'w-28 min-w-[100px]' },
-        { key: 'kpg', label: 'KPG', width: 'w-24 min-w-[90px]' },
-        { key: 'wb_total', label: 'WB Total', width: 'min-w-[140px]', highlight: true },
-        { key: 'lbff1', label: 'LBFF 1', width: 'min-w-[100px]' },
-        { key: 'lbff3', label: 'LBFF 3', width: 'min-w-[100px]' },
-        { key: 'lbff4', label: 'LBFF 4', width: 'min-w-[100px]' },
-        { key: 'lbff5', label: 'LBFF 5', width: 'min-w-[100px]' },
-        { key: 'lbff6', label: 'LBFF 6', width: 'min-w-[100px]' },
-        { key: 'lbff7', label: 'LBFF 7', width: 'min-w-[100px]' },
-        { key: 'lbff8', label: 'LBFF 8', width: 'min-w-[100px]' },
-        { key: 'lbff9', label: 'LBFF 9', width: 'min-w-[100px]' },
-        { key: 'wb2024s1', label: 'WB 24 S1', width: 'min-w-[110px]' },
-        { key: 'wb2024s2', label: 'WB 24 S2', width: 'min-w-[110px]' },
-        { key: 'wb2025s1', label: 'WB 25 S1', width: 'min-w-[110px]' },
-        { key: 'wb2025s2', label: 'WB 25 S2', width: 'min-w-[110px]' },
-      ];
     } else {
-      cols = [
-        { key: 'rank', label: '#', width: 'w-16 min-w-[50px]', sticky: true },
-        { key: 'player', label: 'Player', width: 'w-56 min-w-[180px]', sticky: true },
-        { key: 'gold', label: '🥇', width: 'w-16 text-center' },
-        { key: 'silver', label: '🥈', width: 'w-16 text-center' },
-        { key: 'bronze', label: '🥉', width: 'w-16 text-center' },
-        { key: 's_tier', label: 'S-Tier', width: 'w-20 text-center' },
-        { key: 'earnings', label: 'Earnings (USD)', width: 'w-32 text-right' },
-      ];
+      if (isLaffData) {
+         // Fallback layout for when Kills tab has LAFF data (user requested list)
+         cols = [
+            { key: 'rank', label: '#', width: 'w-16 min-w-[70px]', sticky: true },
+            { key: 'player', label: 'Jogador', width: 'w-56 min-w-[200px]', sticky: true },
+            { key: 'team', label: 'Equipe', width: 'w-48 min-w-[150px]' },
+            { key: 'totalKills', label: 'Abates', width: 'w-32 min-w-[120px]', highlight: true },
+            { key: 'matches', label: 'Partidas', width: 'w-28 min-w-[100px]' },
+            { key: 'kpg', label: 'KPG', width: 'w-24 min-w-[90px]' },
+         ];
+      } else {
+         // Standard LBFF layout (Also default for isKills)
+         cols = [
+            { key: 'rank', label: '#', width: 'w-16 min-w-[70px]', sticky: true },
+            { key: 'player', label: 'Jogador', width: 'w-56 min-w-[200px]', sticky: true },
+            { key: 'totalKills', label: 'Abates', width: 'w-32 min-w-[120px]' },
+            { key: 'matches', label: 'Partidas', width: 'w-28 min-w-[100px]' },
+            { key: 'kpg', label: 'KPG', width: 'w-24 min-w-[90px]' },
+            { key: 'wb_total', label: 'WB Total', width: 'min-w-[140px]', highlight: true },
+            { key: 'lbff1', label: 'LBFF 1', width: 'min-w-[100px]' },
+            { key: 'lbff3', label: 'LBFF 3', width: 'min-w-[100px]' },
+            { key: 'lbff4', label: 'LBFF 4', width: 'min-w-[100px]' },
+            { key: 'lbff5', label: 'LBFF 5', width: 'min-w-[100px]' },
+            { key: 'lbff6', label: 'LBFF 6', width: 'min-w-[100px]' },
+            { key: 'lbff7', label: 'LBFF 7', width: 'min-w-[100px]' },
+            { key: 'lbff8', label: 'LBFF 8', width: 'min-w-[100px]' },
+            { key: 'lbff9', label: 'LBFF 9', width: 'min-w-[100px]' },
+            { key: 'wb2024s1', label: 'WB 24 S1', width: 'min-w-[110px]' },
+            { key: 'wb2024s2', label: 'WB 24 S2', width: 'min-w-[110px]' },
+            { key: 'wb2025s1', label: 'WB 25 S1', width: 'min-w-[110px]' },
+            { key: 'wb2025s2', label: 'WB 25 S2', width: 'min-w-[110px]' },
+         ];
+      }
     }
     
     // Add Admin Edit Column if active and is Kills or FFWS
@@ -170,7 +177,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
     }
 
     return cols;
-  }, [isKills, isFFWS, isLaff, isAdmin, subTab, splitFilter]);
+  }, [isKills, isFFWS, isLaff, isAdmin, subTab, splitFilter, data]);
 
   const sortedAndFilteredData = useMemo(() => {
     let output = [...processedData];
@@ -335,7 +342,7 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
                   style={col.sticky ? { left: index === 0 ? 0 : '70px', boxShadow: index > 0 ? '4px 0 10px -2px rgba(0,0,0,0.3)' : 'none' } : {}}
                   onClick={() => col.key !== 'actions' && requestSort(col.key)}
                 >
-                  <div className={`flex items-center gap-1.5 ${col.key === 'earnings' ? 'justify-end' : (col.width.includes('text-center') ? 'justify-center' : '')}`}>
+                  <div className={`flex items-center gap-1.5 ${col.width.includes('text-center') ? 'justify-center' : ''}`}>
                     {col.label}
                     {col.key !== 'actions' && (
                         <ArrowUpDown className={`w-3 h-3 transition-all ${sortConfig.key === col.key ? 'text-amber-500 opacity-100 scale-110' : 'opacity-30'}`} />
@@ -357,13 +364,12 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
                 {columns.map((col, index) => {
                   const val = row[col.key];
                   const isRank = col.key === 'rank';
-                  const isMainMetric = col.key === 'totalKills' || col.key === 'earnings';
+                  const isMainMetric = col.key === 'totalKills';
                   const isPlayer = col.key === 'player';
                   const isWBTotal = col.key === 'wb_total';
-                  const isMedal = ['gold', 'silver', 'bronze', 's_tier'].includes(col.key as string);
                   const isAction = col.key === 'actions';
                   const isSpecial = (col as any).special;
-                  const isAverage = col.key === 'kpg' || col.key === 'kd_avg'; // UPDATED to include kd_avg
+                  const isAverage = col.key === 'kpg' || col.key === 'kd_avg'; 
 
                   return (
                     <td 
@@ -401,15 +407,11 @@ export const DataTable: React.FC<DataTableProps> = ({ data, type, subTab, splitF
                           )}
                         </div>
                       ) : isMainMetric ? (
-                        <div className={`font-mono font-bold text-lg tracking-tight ${accentColor} drop-shadow-[0_0_10px_rgba(0,0,0,0.5)] ${col.key === 'earnings' ? 'text-right' : ''}`}>
-                          {isKills || isFFWS || isLaff ? val : `$${val.toLocaleString()}`}
+                        <div className={`font-mono font-bold text-lg tracking-tight ${accentColor} drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]`}>
+                          {val}
                         </div>
                       ) : isWBTotal ? (
                          <span className="font-mono font-bold text-xs text-indigo-300 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.1)]">{val}</span>
-                      ) : isMedal ? (
-                         <div className={`font-mono font-bold text-center ${val > 0 ? 'text-white' : 'text-slate-700'}`}>
-                            {val}
-                         </div>
                       ) : isAverage ? (
                          <span className={`font-mono px-2 py-1 rounded text-xs font-bold ${Number(val) > 2 ? 'bg-amber-500/20 text-amber-400' : Number(val) > 1.5 ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-slate-400'}`}>{val}</span>
                       ) : (
