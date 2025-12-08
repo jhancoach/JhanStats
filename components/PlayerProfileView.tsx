@@ -190,8 +190,8 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
              <div className="bg-[#0B0F19] rounded-3xl p-6 md:p-8 border border-white/10 relative overflow-hidden shadow-2xl">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
                 
-                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-6 w-full md:w-auto">
+                <div className="relative z-10 flex flex-col xl:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-6 w-full xl:w-auto">
                         {/* Avatar */}
                         <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-800 flex items-center justify-center text-4xl md:text-5xl font-black text-white shadow-lg shadow-indigo-500/20 shrink-0">
                             {getInitials(player.player)}
@@ -215,12 +215,12 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
                         </div>
                     </div>
 
-                    <div className="w-full md:w-auto flex flex-col items-stretch md:items-end gap-3">
-                        <div className="flex gap-3 no-print">
+                    <div className="w-full xl:w-auto flex flex-col items-stretch xl:items-end gap-3">
+                        <div className="flex flex-wrap gap-3 no-print justify-end">
                             <button 
                                 onClick={handleDownloadImage}
                                 disabled={isDownloading}
-                                className="flex-1 md:flex-none px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 md:flex-none px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                 title="Salvar como Imagem"
                             >
                                 {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />}
@@ -229,7 +229,7 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
                             <button 
                                 onClick={handlePrint}
                                 disabled={isDownloading}
-                                className="flex-1 md:flex-none px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 group disabled:opacity-50"
+                                className="flex-1 md:flex-none px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 whitespace-nowrap"
                                 title="Gerar PDF para Impressão"
                             >
                                 <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
