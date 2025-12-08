@@ -28,7 +28,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  LabelList
 } from 'recharts';
 
 interface ScoutViewProps {
@@ -464,7 +465,15 @@ const ScoutPlayerCard: React.FC<{ player: KillStat; isPrintMode?: boolean }> = (
                             fillOpacity={isPrintMode ? 0.2 : 1}
                             activeDot={{r: 6, strokeWidth: 0, fill: '#fff'}}
                             animationDuration={isPrintMode ? 0 : 1000}
-                        />
+                        >
+                          <LabelList 
+                              dataKey="kills" 
+                              position="top" 
+                              offset={10} 
+                              className="fill-white text-[10px] font-bold" 
+                              formatter={(val: number) => val > 0 ? val : ''}
+                          />
+                        </Area>
                     </AreaChart>
                 </ResponsiveContainer>
              </div>
