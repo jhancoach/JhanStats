@@ -13,6 +13,9 @@ import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
 import { Skull, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair, Radar } from 'lucide-react';
 
+// URL da Planilha de Mais Abates
+const MAIS_ABATES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRSsZv3U56n8ZHV9t3f-RM6nS55HL3Ur4mM5E_VvAuDYZ-MMJ6AFBRxqiv1BEqIYwfbsumlhY8cW1az/pub?output=csv';
+
 // New Split CSV Links
 const WB_2024_S1_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQYc8m8JZnDeFr3FeN97I4NJwwuc0P1uN8v6JEv06_OflL5QCr_4t75yOe-xkqC9TnS3Cf-tRLT4aDZ/pub?output=csv';
 const WB_2024_S2_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNiiD9Bc1WutM_N1_R5bVnml85Y2sL3WqoRkmWYM3nvoqAMR5qXt2lEhhs6m_I9r-qQmvUvWX6Z7a6/pub?output=csv';
@@ -56,6 +59,7 @@ const App: React.FC = () => {
   
   // Data State
   const [killStats, setKillStats] = useState<KillStat[]>(KILL_STATS);
+  const [isLoadingKills, setIsLoadingKills] = useState(false);
   
   // Raw Data storage
   const [raw24s1, setRaw24s1] = useState<KillStat[]>([]);
@@ -74,6 +78,79 @@ const App: React.FC = () => {
   useEffect(() => {
     setSplitFilter('all');
   }, [wbSubTab]);
+
+  // Fetch Mais Abates Data
+  useEffect(() => {
+    const fetchKillsData = async () => {
+      setIsLoadingKills(true);
+      try {
+        const response = await fetch(MAIS_ABATES_URL);
+        const csvText = await response.text();
+        
+        const lines = csvText.split('\n').filter(l => l.trim() !== '');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+        // Helper to find index
+        const idx = (keys: string[]) => headers.findIndex(h => keys.some(k => h.includes(k)));
+
+        const iRank = idx(['#', 'rank']);
+        const iPlayer = idx(['player', 'jogador']);
+        const iTeam = idx(['team', 'time']); 
+        const iKills = idx(['kills', 'abates']);
+        const iMatches = idx(['matches', 'partidas', 'quedas']);
+        const iAvg = idx(['average', 'media', 'média']);
+
+        // Season columns mapping
+        const seasonMap: Record<string, number> = {};
+        const seasons = ['lbff 1', 'lbff 3', 'lbff 4', 'lbff 5', 'lbff 6', 'lbff 7', 'lbff 8', 'lbff 9', 'wb 2024 s1', 'wb 2024 s2', 'wb 2025 s1', 'wb 2025 s2'];
+        
+        headers.forEach((h, index) => {
+           seasons.forEach(s => {
+               // Remove spaces for key comparison (e.g. "lbff 1" -> "lbff1")
+               if (h.includes(s)) {
+                   const key = s.replace(/\s/g, ''); 
+                   seasonMap[key] = index;
+               }
+           });
+        });
+
+        const parsedData = lines.slice(1).map((line, index) => {
+            // Regex to split by comma but ignore commas inside quotes
+            const row = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+            
+            const clean = (val: string) => val ? val.replace(/^"|"$/g, '').trim() : '';
+
+            const playerStats: any = {
+                rank: iRank > -1 ? parseInt(clean(row[iRank])) || (index + 1) : (index + 1),
+                player: iPlayer > -1 ? clean(row[iPlayer]) : 'Unknown',
+                team: iTeam > -1 ? clean(row[iTeam]) : '',
+                totalKills: iKills > -1 ? parseInt(clean(row[iKills]).replace(/\./g, '')) || 0 : 0,
+                matches: iMatches > -1 ? parseInt(clean(row[iMatches]).replace(/\./g, '')) || 0 : 0,
+                kpg: iAvg > -1 ? parseFloat(clean(row[iAvg]).replace(',', '.')) || 0 : 0,
+                events: 'LBFF',
+            };
+
+            // Map seasons dynamically
+            Object.entries(seasonMap).forEach(([key, colIdx]) => {
+                playerStats[key] = clean(row[colIdx]);
+            });
+
+            return playerStats as KillStat;
+        }).filter(p => p.player !== 'Unknown' && p.totalKills > 0);
+
+        if (parsedData.length > 0) {
+            setKillStats(parsedData);
+        }
+
+      } catch (e) {
+        console.error("Error fetching kills data", e);
+      } finally {
+        setIsLoadingKills(false);
+      }
+    };
+
+    fetchKillsData();
+  }, []);
 
   // Fetch all WB Data
   useEffect(() => {
@@ -727,6 +804,13 @@ const App: React.FC = () => {
                       <div className="flex flex-col items-center gap-4">
                           <Globe className="w-10 h-10 text-indigo-500 animate-spin" />
                           <span className="text-slate-400 font-mono text-sm">Carregando e Mesclando Dados...</span>
+                      </div>
+                  </div>
+              ) : activeTab === 'kills' && isLoadingKills ? (
+                  <div className="h-[400px] flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-pulse">
+                      <div className="flex flex-col items-center gap-4">
+                          <Skull className="w-10 h-10 text-amber-500 animate-spin" />
+                          <span className="text-slate-400 font-mono text-sm">Carregando Lendas...</span>
                       </div>
                   </div>
               ) : (

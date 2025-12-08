@@ -80,8 +80,54 @@ export const ScoutView: React.FC<ScoutViewProps> = ({ allPlayers }) => {
   if (isGenerated) {
     return (
       <div className="flex flex-col gap-8 animate-fade-in pb-20">
+        {/* CSS para Impressão */}
+        <style>{`
+          @media print {
+            @page {
+              margin: 0;
+              size: auto;
+            }
+            body * {
+              visibility: hidden;
+            }
+            #printable-scout-report, #printable-scout-report * {
+              visibility: visible;
+            }
+            #printable-scout-report {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100vw;
+              min-height: 100vh;
+              background-color: #0B0F19 !important;
+              color: white !important;
+              padding: 0;
+              z-index: 9999;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-page-break {
+              break-after: always;
+              page-break-after: always;
+              height: 100vh;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              padding: 40px;
+              box-sizing: border-box;
+            }
+            .no-print {
+              display: none !important;
+            }
+            /* Esconder scrollbars na impressão */
+            ::-webkit-scrollbar {
+              display: none;
+            }
+          }
+        `}</style>
+
         {/* Toolbar (Hidden on Print) */}
-        <div className="flex items-center justify-between bg-[#0B0F19] border border-white/10 p-4 rounded-2xl sticky top-24 z-40 shadow-2xl print:hidden">
+        <div className="flex items-center justify-between bg-[#0B0F19] border border-white/10 p-4 rounded-2xl sticky top-24 z-40 shadow-2xl print:hidden no-print">
            <button 
              onClick={() => setIsGenerated(false)}
              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
@@ -102,11 +148,11 @@ export const ScoutView: React.FC<ScoutViewProps> = ({ allPlayers }) => {
         </div>
 
         {/* Render Profiles */}
-        <div className="space-y-12 print:space-y-0 print:block">
+        <div id="printable-scout-report" className="space-y-12 print:space-y-0 print:block">
           {selectedPlayers.map((player, index) => (
-            <div key={player.player} className="print:break-after-always print:pb-0">
-               <ScoutPlayerCard player={player} />
-               {index < selectedPlayers.length - 1 && <div className="h-px bg-white/10 w-full my-12 print:hidden"></div>}
+            <div key={player.player} className="print-page-break">
+               <ScoutPlayerCard player={player} isPrintMode={true} />
+               {index < selectedPlayers.length - 1 && <div className="h-px bg-white/10 w-full my-12 print:hidden no-print"></div>}
             </div>
           ))}
         </div>
@@ -286,7 +332,7 @@ export const ScoutView: React.FC<ScoutViewProps> = ({ allPlayers }) => {
 };
 
 // --- Helper Component: Individual Scout Player Card (Matches specific design) ---
-const ScoutPlayerCard: React.FC<{ player: KillStat }> = ({ player }) => {
+const ScoutPlayerCard: React.FC<{ player: KillStat; isPrintMode?: boolean }> = ({ player, isPrintMode }) => {
   
   const getInitials = (name: string) => name ? name.substring(0, 2).toUpperCase() : '??';
 
@@ -311,19 +357,13 @@ const ScoutPlayerCard: React.FC<{ player: KillStat }> = ({ player }) => {
             kills = parseInt(parts[0], 10) || 0;
             if (parts[1]) matches = parseInt(parts[1].replace(')', ''), 10) || 0;
         } else if (typeof rawData === 'number') {
-            // Handle if data is passed differently (though mergedData uses strings for legacy keys usually)
             kills = rawData;
-            // Assuming matches is available or we fallback
             matches = 0; 
         }
       } else {
-          // Try explicit keys if available in object
           const kKey = `kills${season.key.replace('wb20', '')}`; 
           if ((player as any)[kKey]) {
               kills = (player as any)[kKey];
-              // Matches for splits might not be individually stored in merged object easily without parsing, 
-              // but for the visual "Card" we display what we have.
-              // In this specific app architecture, the merged data has string formats like "120 (40)"
           }
       }
 
@@ -341,34 +381,34 @@ const ScoutPlayerCard: React.FC<{ player: KillStat }> = ({ player }) => {
   return (
     <div className="w-full">
       {/* 1. Header Hero */}
-      <div className="bg-[#0B0F19] rounded-3xl p-6 md:p-8 border border-white/10 relative overflow-hidden shadow-2xl mb-6">
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+      <div className="bg-[#0B0F19] rounded-3xl p-6 md:p-8 border border-white/10 relative overflow-hidden shadow-2xl mb-6 print:border-slate-500 print:shadow-none">
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none print:hidden"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-6 w-full md:w-auto">
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-800 flex items-center justify-center text-4xl font-black text-white shadow-lg shadow-indigo-500/20 shrink-0">
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-800 flex items-center justify-center text-4xl font-black text-white shadow-lg shadow-indigo-500/20 shrink-0 print:border print:border-slate-300 print:text-black print:bg-white">
                     {getInitials(player.player)}
                 </div>
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold uppercase tracking-wider print:border-amber-600 print:text-amber-600">
                             <Trophy className="w-3 h-3 fill-current" /> Rank #{player.rank}
                         </span>
-                        <span className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                        <span className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider print:text-slate-600 print:border-slate-300">
                             {player.team}
                         </span>
                     </div>
-                    <h1 className="text-5xl font-black text-white tracking-tighter mb-1">
+                    <h1 className="text-5xl font-black text-white tracking-tighter mb-1 print:text-black">
                         {player.player}
                     </h1>
-                    <p className="text-slate-400 text-xs max-w-md">
+                    <p className="text-slate-400 text-xs max-w-md print:text-slate-600">
                         Análise completa de desempenho. Dados consolidados de todas as competições oficiais rastreadas (FFWSBR & World Series).
                     </p>
                 </div>
             </div>
             <div className="text-right flex flex-col items-end">
-                <div className="text-xs text-slate-500 uppercase font-bold tracking-widest mb-1">Total Geral</div>
-                <div className="text-5xl font-mono font-bold text-white tracking-tight">{player.totalKills}</div>
-                <div className="text-indigo-400 text-xs font-bold mt-1">Abates Confirmados</div>
+                <div className="text-xs text-slate-500 uppercase font-bold tracking-widest mb-1 print:text-slate-600">Total Geral</div>
+                <div className="text-5xl font-mono font-bold text-white tracking-tight print:text-black">{player.totalKills}</div>
+                <div className="text-indigo-400 text-xs font-bold mt-1 print:text-indigo-600">Abates Confirmados</div>
             </div>
         </div>
       </div>
@@ -392,9 +432,9 @@ const ScoutPlayerCard: React.FC<{ player: KillStat }> = ({ player }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Chart */}
-          <div className="lg:col-span-2 bg-[#0B0F19] rounded-2xl p-6 border border-white/10">
-             <h3 className="flex items-center gap-2 font-bold text-white mb-6">
-               <TrendingUp className="w-5 h-5 text-indigo-400" />
+          <div className="lg:col-span-2 bg-[#0B0F19] rounded-2xl p-6 border border-white/10 print:border-slate-500">
+             <h3 className="flex items-center gap-2 font-bold text-white mb-6 print:text-black">
+               <TrendingUp className="w-5 h-5 text-indigo-400 print:text-indigo-600" />
                Evolução Temporal de Performance
              </h3>
              <div className="h-[200px] w-full">
@@ -409,18 +449,21 @@ const ScoutPlayerCard: React.FC<{ player: KillStat }> = ({ player }) => {
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                         <XAxis dataKey="name" stroke="#64748b" tick={{fill: '#64748b', fontSize: 10}} axisLine={false} tickLine={false} />
                         <YAxis stroke="#64748b" tick={{fill: '#64748b', fontSize: 10}} axisLine={false} tickLine={false} />
-                        <Tooltip 
-                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
-                            itemStyle={{ color: '#fff' }}
-                        />
+                        {!isPrintMode && (
+                            <Tooltip 
+                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#fff' }}
+                                itemStyle={{ color: '#fff' }}
+                            />
+                        )}
                         <Area 
                             type="monotone" 
                             dataKey="kills" 
                             stroke="#818cf8" 
                             strokeWidth={3} 
-                            fill={`url(#grad-${player.player})`} 
+                            fill={isPrintMode ? '#818cf8' : `url(#grad-${player.player})`} 
+                            fillOpacity={isPrintMode ? 0.2 : 1}
                             activeDot={{r: 6, strokeWidth: 0, fill: '#fff'}}
-                            animationDuration={1000}
+                            animationDuration={isPrintMode ? 0 : 1000}
                         />
                     </AreaChart>
                 </ResponsiveContainer>
@@ -429,27 +472,27 @@ const ScoutPlayerCard: React.FC<{ player: KillStat }> = ({ player }) => {
 
           {/* Split History Cards */}
           <div className="flex flex-col gap-3">
-             <div className="flex items-center gap-2 font-bold text-amber-400 mb-2">
+             <div className="flex items-center gap-2 font-bold text-amber-400 mb-2 print:text-amber-600">
                <Target className="w-4 h-4" /> Histórico Detalhado por Split
              </div>
              {seasonData.map((s) => (
-                <div key={s.id} className="bg-[#0f1420] border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-white/10 transition-colors">
+                <div key={s.id} className="bg-[#0f1420] border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-white/10 transition-colors print:bg-white print:border-slate-300 print:text-black">
                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-l-xl"></div>
                    <div className="flex justify-between items-start mb-2 pl-2">
                       <div>
-                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.name}</div>
-                        <div className="text-2xl font-bold text-white font-mono">{s.kills} <span className="text-xs text-slate-500 font-sans font-normal">Kills</span></div>
+                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider print:text-slate-600">{s.name}</div>
+                        <div className="text-2xl font-bold text-white font-mono print:text-black">{s.kills} <span className="text-xs text-slate-500 font-sans font-normal">Kills</span></div>
                       </div>
-                      <div className="px-2 py-1 bg-white/5 rounded text-[10px] text-slate-400 border border-white/5">
+                      <div className="px-2 py-1 bg-white/5 rounded text-[10px] text-slate-400 border border-white/5 print:border-slate-300 print:text-slate-600">
                         {s.matches} Quedas
                       </div>
                    </div>
                    <div className="pl-2 flex items-center justify-between">
-                      <span className="text-xs text-slate-500">Média (KPG)</span>
-                      <span className={`font-mono font-bold ${Number(s.kpg) > 2 ? 'text-emerald-400' : 'text-indigo-400'}`}>{s.kpg}</span>
+                      <span className="text-xs text-slate-500 print:text-slate-600">Média (KPG)</span>
+                      <span className={`font-mono font-bold ${Number(s.kpg) > 2 ? 'text-emerald-400 print:text-emerald-600' : 'text-indigo-400 print:text-indigo-600'}`}>{s.kpg}</span>
                    </div>
                    {/* Mini Progress Bar for KPG visual */}
-                   <div className="mt-2 pl-2 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                   <div className="mt-2 pl-2 h-1 w-full bg-slate-800 rounded-full overflow-hidden print:bg-slate-200">
                       <div className="h-full bg-indigo-500" style={{width: `${Math.min(100, (Number(s.kpg) / 3) * 100)}%`}}></div>
                    </div>
                 </div>
@@ -467,26 +510,26 @@ const ScoutPlayerCard: React.FC<{ player: KillStat }> = ({ player }) => {
 const StatBox = ({ icon: Icon, label, value, subLabel, color }: any) => {
   // Map color to classes
   const colorMap: any = {
-    indigo: { icon: 'text-indigo-400', bg: 'bg-indigo-500/10' },
-    amber: { icon: 'text-amber-400', bg: 'bg-amber-500/10' },
-    blue: { icon: 'text-blue-400', bg: 'bg-blue-500/10' },
-    emerald: { icon: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    rose: { icon: 'text-rose-400', bg: 'bg-rose-500/10' },
-    orange: { icon: 'text-orange-400', bg: 'bg-orange-500/10' },
-    cyan: { icon: 'text-cyan-400', bg: 'bg-cyan-500/10' },
-    green: { icon: 'text-green-400', bg: 'bg-green-500/10' },
+    indigo: { icon: 'text-indigo-400 print:text-indigo-600', bg: 'bg-indigo-500/10 print:bg-indigo-100' },
+    amber: { icon: 'text-amber-400 print:text-amber-600', bg: 'bg-amber-500/10 print:bg-amber-100' },
+    blue: { icon: 'text-blue-400 print:text-blue-600', bg: 'bg-blue-500/10 print:bg-blue-100' },
+    emerald: { icon: 'text-emerald-400 print:text-emerald-600', bg: 'bg-emerald-500/10 print:bg-emerald-100' },
+    rose: { icon: 'text-rose-400 print:text-rose-600', bg: 'bg-rose-500/10 print:bg-rose-100' },
+    orange: { icon: 'text-orange-400 print:text-orange-600', bg: 'bg-orange-500/10 print:bg-orange-100' },
+    cyan: { icon: 'text-cyan-400 print:text-cyan-600', bg: 'bg-cyan-500/10 print:bg-cyan-100' },
+    green: { icon: 'text-green-400 print:text-green-600', bg: 'bg-green-500/10 print:bg-green-100' },
   };
   const theme = colorMap[color] || colorMap.indigo;
 
   return (
-    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:bg-white/5 transition-colors">
+    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:bg-white/5 transition-colors print:bg-white print:border-slate-300 print:text-black">
        <div className={`p-3 rounded-xl ${theme.bg}`}>
           <Icon className={`w-6 h-6 ${theme.icon}`} />
        </div>
        <div>
-          <div className="text-2xl font-bold text-white font-mono">{value}</div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{label}</div>
-          <div className="text-[10px] text-slate-600 mt-0.5">{subLabel}</div>
+          <div className="text-2xl font-bold text-white font-mono print:text-black">{value}</div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider print:text-slate-600">{label}</div>
+          <div className="text-[10px] text-slate-600 mt-0.5 print:text-slate-500">{subLabel}</div>
        </div>
     </div>
   );
