@@ -260,18 +260,18 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
                   <StatBox icon={Heart} label="Revividos" value={player.revives || 0} subLabel="Aliados Salvos" color="green" />
              </div>
 
-             {/* 3. Evolution Chart & Split History */}
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+             {/* 3. Evolution Chart & Split History (Vertical Layout) */}
+             <div className="flex flex-col gap-8">
                 
-                {/* Chart (2 Columns) */}
-                <div className="lg:col-span-2 bg-[#0B0F19] rounded-2xl p-6 border border-white/10 shadow-lg">
+                {/* Chart Section (Full Width) */}
+                <div className="w-full bg-[#0B0F19] rounded-2xl p-6 border border-white/10 shadow-lg">
                    <div className="flex items-center justify-between mb-6">
                       <h3 className="font-bold text-white flex items-center gap-2">
                           <TrendingUp className="w-5 h-5 text-indigo-400" />
                           Evolução Temporal de Performance
                       </h3>
                    </div>
-                   <div className="h-[250px] w-full">
+                   <div className="h-[300px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={seasonData.slice().reverse()} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
                               <defs>
@@ -309,33 +309,35 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
                    </div>
                 </div>
 
-                {/* Split History Cards (1 Column) */}
-                <div className="flex flex-col gap-3">
-                   <div className="flex items-center gap-2 font-bold text-amber-400 mb-2">
+                {/* Split History Cards (Grid below chart) */}
+                <div className="flex flex-col gap-4">
+                   <div className="flex items-center gap-2 font-bold text-amber-400">
                      <Target className="w-4 h-4" /> Histórico Detalhado por Split
                    </div>
-                   {seasonData.map((s) => (
-                      <div key={s.id} className="bg-[#0f1420] border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-white/10 transition-colors shadow-lg">
-                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-l-xl"></div>
-                         <div className="flex justify-between items-start mb-2 pl-2">
-                            <div>
-                              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.name}</div>
-                              <div className="text-2xl font-bold text-white font-mono">{s.kills} <span className="text-xs text-slate-500 font-sans font-normal">Kills</span></div>
-                            </div>
-                            <div className="px-2 py-1 bg-white/5 rounded text-[10px] text-slate-400 border border-white/5">
-                              {s.matches} Quedas
-                            </div>
-                         </div>
-                         <div className="pl-2 flex items-center justify-between">
-                            <span className="text-xs text-slate-500">Média (KPG)</span>
-                            <span className={`font-mono font-bold ${Number(s.kpg) > 2 ? 'text-emerald-400' : 'text-indigo-400'}`}>{s.kpg}</span>
-                         </div>
-                         {/* Mini Progress Bar for KPG visual */}
-                         <div className="mt-2 pl-2 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-500" style={{width: `${Math.min(100, (Number(s.kpg) / 3) * 100)}%`}}></div>
-                         </div>
-                      </div>
-                   ))}
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                     {seasonData.map((s) => (
+                        <div key={s.id} className="bg-[#0f1420] border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-white/10 transition-colors shadow-lg">
+                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-l-xl"></div>
+                           <div className="flex justify-between items-start mb-2 pl-2">
+                              <div>
+                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.name}</div>
+                                <div className="text-2xl font-bold text-white font-mono">{s.kills} <span className="text-xs text-slate-500 font-sans font-normal">Kills</span></div>
+                              </div>
+                              <div className="px-2 py-1 bg-white/5 rounded text-[10px] text-slate-400 border border-white/5">
+                                {s.matches} Quedas
+                              </div>
+                           </div>
+                           <div className="pl-2 flex items-center justify-between">
+                              <span className="text-xs text-slate-500">Média (KPG)</span>
+                              <span className={`font-mono font-bold ${Number(s.kpg) > 2 ? 'text-emerald-400' : 'text-indigo-400'}`}>{s.kpg}</span>
+                           </div>
+                           {/* Mini Progress Bar for KPG visual */}
+                           <div className="mt-2 pl-2 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-indigo-500" style={{width: `${Math.min(100, (Number(s.kpg) / 3) * 100)}%`}}></div>
+                           </div>
+                        </div>
+                     ))}
+                   </div>
                    {seasonData.length === 0 && (
                       <div className="p-4 text-center text-slate-500 text-xs bg-[#0f1420] rounded-xl border border-white/5">Sem histórico de splits recente.</div>
                    )}
