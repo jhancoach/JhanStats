@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { KILL_STATS, LAFF_STATS } from './constants';
-import { KillStat, EarningStat } from './types';
+import { KillStat, EarningStat, ValuationForm } from './types';
 import { DataTable } from './components/DataTable';
 import { StatsPanel } from './components/StatsPanel';
 import { PlayerProgressionModal } from './components/PlayerProgressionModal';
@@ -10,10 +10,11 @@ import { StandingsView } from './components/StandingsView';
 import { ScoutView } from './components/ScoutView';
 import { SquadBuilderView } from './components/SquadBuilderView';
 import { AnalyticsView } from './components/AnalyticsView';
+import { ValuationView } from './components/ValuationView';
 import { EntryScreen } from './components/EntryScreen';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
-import { Skull, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair, Radar, Shield, PieChart } from 'lucide-react';
+import { Skull, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair, Radar, Shield, PieChart, Calculator } from 'lucide-react';
 
 // URL da Planilha de Mais Abates
 const MAIS_ABATES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRSsZv3U56n8ZHV9t3f-RM6nS55HL3Ur4mM5E_VvAuDYZ-MMJ6AFBRxqiv1BEqIYwfbsumlhY8cW1az/pub?output=csv';
@@ -52,7 +53,7 @@ const normalizePlayerName = (name: string): string => {
 
 const App: React.FC = () => {
   const [showEntry, setShowEntry] = useState(true);
-  const [activeTab, setActiveTab] = useState<'kills' | 'ffwsbr' | 'standings' | 'laff' | 'squad' | 'analytics'>('kills');
+  const [activeTab, setActiveTab] = useState<'kills' | 'ffwsbr' | 'standings' | 'laff' | 'squad' | 'analytics' | 'valuation'>('kills');
   const [wbSubTab, setWbSubTab] = useState<WBSubTab>('general'); // Default to General as requested
   const [splitFilter, setSplitFilter] = useState<SplitFilter>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -75,6 +76,9 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [playerToEdit, setPlayerToEdit] = useState<KillStat | null>(null);
+
+  // Valuation Persisted State
+  const [valuationFormState, setValuationFormState] = useState<ValuationForm | null>(null);
 
   // Reset filter when subtab changes
   useEffect(() => {
@@ -247,8 +251,8 @@ const App: React.FC = () => {
       let datasets: KillStat[][] = [];
 
       // Determine datasets based on active tab AND split filter
-      // For 'profile', 'scout', 'squad' and 'analytics' tab, we want all data available
-      if (wbSubTab === 'general' || wbSubTab === 'profile' || wbSubTab === 'scout' || activeTab === 'squad' || activeTab === 'analytics') {
+      // For 'profile', 'scout', 'squad', 'analytics', 'valuation' tab, we want all data available
+      if (wbSubTab === 'general' || wbSubTab === 'profile' || wbSubTab === 'scout' || activeTab === 'squad' || activeTab === 'analytics' || activeTab === 'valuation') {
           if (splitFilter === 'all') datasets = [raw24s1, raw24s2, raw25s1, raw25s2];
           else if (splitFilter === 'wb24s1') datasets = [raw24s1];
           else if (splitFilter === 'wb24s2') datasets = [raw24s2];
@@ -573,6 +577,17 @@ const App: React.FC = () => {
                     Dashboard
                   </button>
                   <button 
+                    onClick={() => setActiveTab('valuation')}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'valuation' 
+                      ? 'bg-gradient-to-b from-slate-800 to-black text-pink-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-pink-500/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Calculator className={`w-4 h-4 ${activeTab === 'valuation' ? 'text-pink-500' : ''}`} />
+                    Valuation
+                  </button>
+                  <button 
                     onClick={() => setActiveTab('squad')}
                     className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
                       activeTab === 'squad' 
@@ -680,6 +695,14 @@ const App: React.FC = () => {
                     <PieChart className="w-5 h-5" /> Dashboard
                   </button>
                   <button 
+                     onClick={() => { setActiveTab('valuation'); setMobileMenuOpen(false); }}
+                     className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
+                      activeTab === 'valuation' ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'text-slate-300'
+                    }`}
+                  >
+                    <Calculator className="w-5 h-5" /> Valuation
+                  </button>
+                  <button 
                      onClick={() => { setActiveTab('squad'); setMobileMenuOpen(false); }}
                      className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
                       activeTab === 'squad' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'text-slate-300'
@@ -741,6 +764,10 @@ const App: React.FC = () => {
                     <>
                        Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Visual</span>
                     </>
+                  ) : activeTab === 'valuation' ? (
+                    <>
+                       Valuation <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-500">Player</span>
+                    </>
                   ) : (
                      <>
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">FFWSBR</span>
@@ -758,6 +785,8 @@ const App: React.FC = () => {
                     ? 'Simulador de Line-up. Monte seu time dos sonhos com dados reais e exporte.'
                     : activeTab === 'analytics'
                     ? 'Tabelas visuais detalhadas de Combate e Suporte.'
+                    : activeTab === 'valuation'
+                    ? 'Calcule o valor de mercado e faixa salarial com base em métricas de desempenho e influência.'
                     : 'Tabelas de classificação oficiais atualizadas de todas as edições do FFWS Brasil.'
                   }
                 </p>
@@ -858,6 +887,12 @@ const App: React.FC = () => {
                     players={mergedFFWSData} 
                     onPlayerClick={handlePlayerClick} 
                   />
+              ) : activeTab === 'valuation' ? (
+                  <ValuationView 
+                    players={mergedFFWSData} 
+                    savedForm={valuationFormState}
+                    onSaveForm={setValuationFormState}
+                  />
               ) : activeTab === 'ffwsbr' && isLoadingFFWS ? (
                   <div className="h-[400px] flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-pulse">
                       <div className="flex flex-col items-center gap-4">
@@ -895,8 +930,8 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* Sidebar (Hide in Profile, Scout, Standings, Squad, Analytics to give full width) */}
-            {(activeTab !== 'standings' && activeTab !== 'squad' && activeTab !== 'analytics' && (activeTab !== 'ffwsbr' || (wbSubTab !== 'profile' && wbSubTab !== 'scout'))) && (
+            {/* Sidebar (Hide in Profile, Scout, Standings, Squad, Analytics, Valuation to give full width) */}
+            {(activeTab !== 'standings' && activeTab !== 'squad' && activeTab !== 'analytics' && activeTab !== 'valuation' && (activeTab !== 'ffwsbr' || (wbSubTab !== 'profile' && wbSubTab !== 'scout'))) && (
               <StatsPanel 
                 killsData={activeTab === 'ffwsbr' ? mergedFFWSData : activeTab === 'laff' ? LAFF_STATS : killStats} 
                 activeTab={activeTab as any}
@@ -915,7 +950,7 @@ const App: React.FC = () => {
              </div>
              <p className="text-slate-500 text-sm">
                &copy; 2024 JhanStats.
-               {activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff' || activeTab === 'squad' || activeTab === 'analytics' ? (
+               {activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff' || activeTab === 'squad' || activeTab === 'analytics' || activeTab === 'valuation' ? (
                   <> Dados tratados por <span className="text-slate-400 font-medium">Jhan</span>.</>
                ) : (
                   <> Dados fornecidos por <span className="text-slate-400 font-medium">Liquipedia</span>.</>

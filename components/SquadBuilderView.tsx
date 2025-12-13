@@ -27,7 +27,9 @@ import {
   Users,
   LayoutGrid,
   PenTool,
-  BarChart2
+  BarChart2,
+  List,
+  Table as TableIcon
 } from 'lucide-react';
 
 interface SquadBuilderViewProps {
@@ -143,6 +145,9 @@ const SlotCard: React.FC<{ slot: SquadSlot; onEdit: (id: string) => void; onView
 };
 
 export const SquadBuilderView: React.FC<SquadBuilderViewProps> = ({ players }) => {
+  // View Mode State
+  const [viewMode, setViewMode] = useState<'builder' | 'list'>('builder');
+
   // State for Squad Meta
   const [squadName, setSquadName] = useState('Novo Elenco');
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
@@ -172,6 +177,38 @@ export const SquadBuilderView: React.FC<SquadBuilderViewProps> = ({ players }) =
 
   // Computed Values
   const totalSalary = useMemo(() => slots.reduce((acc, slot) => acc + (slot.salary || 0), 0), [slots]);
+
+  // Computed Stats for the List View
+  const squadStats = useMemo(() => {
+    const filledSlots = slots.filter(s => s.assignedPlayer);
+    let totalKills = 0;
+    let totalMatches = 0;
+    let playersCount = 0;
+    let totalAvg = 0;
+
+    const roster = filledSlots.map(slot => {
+        const stats = players.find(p => p.player.toLowerCase() === slot.assignedPlayer?.toLowerCase());
+        
+        if (stats && slot.type === 'player' || slot.type === 'reserve') {
+            totalKills += stats.totalKills;
+            totalMatches += stats.matches;
+            playersCount++;
+            totalAvg += stats.kpg;
+        }
+
+        return {
+            ...slot,
+            realStats: stats || null
+        };
+    });
+
+    return {
+        roster,
+        totalKills,
+        totalMatches,
+        avgKpg: playersCount > 0 ? (totalAvg / playersCount).toFixed(2) : '0.00'
+    };
+  }, [slots, players]);
 
   // -- HISTORY ACTIONS --
   const addToHistory = (newSlots: SquadSlot[]) => {
@@ -292,153 +329,288 @@ export const SquadBuilderView: React.FC<SquadBuilderViewProps> = ({ players }) =
     <div className="max-w-7xl mx-auto space-y-6 pb-20 animate-fade-in">
         
         {/* TOP TOOLBAR */}
-        <div className="glass-panel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 sticky top-24 z-30">
-            <div className="flex items-center gap-2">
-                <button onClick={undo} disabled={historyIndex === 0} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Desfazer">
-                    <Undo2 className="w-5 h-5 text-slate-300" />
-                </button>
-                <button onClick={redo} disabled={historyIndex === history.length - 1} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Refazer">
-                    <Redo2 className="w-5 h-5 text-slate-300" />
-                </button>
-                <div className="w-px h-6 bg-white/10 mx-2"></div>
-                <button 
-                    onClick={() => setSlots(initialSlots)}
-                    className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" 
-                    title="Resetar Elenco"
-                >
-                    <RotateCcw className="w-5 h-5" />
-                </button>
-                <div className="relative group ml-2">
-                     <HelpCircle className="w-5 h-5 text-slate-500 cursor-help" />
-                     <div className="absolute left-0 top-full mt-2 w-64 bg-slate-900 border border-slate-700 p-3 rounded-lg text-xs text-slate-300 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                        Clique nos cards para editar. Salve seu elenco como imagem PNG.
-                     </div>
+        <div className="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 sticky top-24 z-30">
+            <div className="flex items-center gap-4 w-full md:w-auto">
+                {/* View Toggle */}
+                <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 shadow-inner">
+                    <button 
+                        onClick={() => setViewMode('builder')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                            viewMode === 'builder' 
+                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/20' 
+                            : 'text-slate-500 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <LayoutGrid className="w-3.5 h-3.5" /> Visual
+                    </button>
+                    <button 
+                        onClick={() => setViewMode('list')}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                            viewMode === 'list' 
+                            ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-md shadow-amber-500/20' 
+                            : 'text-slate-500 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        <List className="w-3.5 h-3.5" /> Lista & Stats
+                    </button>
+                </div>
+
+                <div className="h-6 w-px bg-white/10 hidden md:block"></div>
+
+                <div className="flex gap-2">
+                    <button onClick={undo} disabled={historyIndex === 0} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Desfazer">
+                        <Undo2 className="w-5 h-5 text-slate-300" />
+                    </button>
+                    <button onClick={redo} disabled={historyIndex === history.length - 1} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Refazer">
+                        <Redo2 className="w-5 h-5 text-slate-300" />
+                    </button>
+                    <div className="w-px h-6 bg-white/10 mx-2"></div>
+                    <button 
+                        onClick={() => setSlots(initialSlots)}
+                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors" 
+                        title="Resetar Elenco"
+                    >
+                        <RotateCcw className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
 
-            <div className="flex items-center gap-3 ml-auto">
-                 <div className="px-4 py-2 bg-emerald-900/20 border border-emerald-500/20 rounded-lg hidden md:block">
-                     <span className="text-xs text-emerald-500 font-bold uppercase mr-2">Folha Salarial:</span>
-                     <span className="text-emerald-300 font-mono font-bold">{formatCurrency(totalSalary)}</span>
+            <div className="flex items-center gap-3 ml-auto w-full md:w-auto justify-end">
+                 <div className="px-4 py-2 bg-emerald-900/20 border border-emerald-500/20 rounded-lg flex items-center gap-2">
+                     <DollarSign className="w-4 h-4 text-emerald-500" />
+                     <span className="text-emerald-300 font-mono font-bold text-sm">{formatCurrency(totalSalary)}</span>
                  </div>
-                 <button 
-                    onClick={handleCapture}
-                    className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20"
-                 >
-                    <Download className="w-4 h-4" /> Salvar PNG
-                 </button>
+                 {viewMode === 'builder' && (
+                     <button 
+                        onClick={handleCapture}
+                        className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 text-sm whitespace-nowrap"
+                     >
+                        <Download className="w-4 h-4" /> PNG
+                     </button>
+                 )}
             </div>
         </div>
 
-        {/* MAIN CANVAS AREA */}
-        <div id="squad-builder-canvas" className="glass-panel p-8 md:p-12 rounded-3xl min-h-[800px] border border-white/10 relative overflow-hidden bg-gradient-to-b from-[#0B0F19] to-[#05070a]">
-            {/* Background Grid Pattern */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
-            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-900/5 rounded-full blur-[150px] pointer-events-none"></div>
+        {/* --- VIEW MODE 1: VISUAL BUILDER --- */}
+        {viewMode === 'builder' && (
+            <div id="squad-builder-canvas" className="glass-panel p-8 md:p-12 rounded-3xl min-h-[800px] border border-white/10 relative overflow-hidden bg-gradient-to-b from-[#0B0F19] to-[#05070a] animate-fade-in">
+                {/* Background Grid Pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-900/5 rounded-full blur-[150px] pointer-events-none"></div>
 
-            {/* Header: Logo & Name */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-16 relative z-10">
-                 <div className="flex items-center gap-6">
-                     <div className="relative group cursor-pointer" onClick={() => logoInputRef.current?.click()}>
-                         <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                         <div className="w-24 h-24 rounded-2xl bg-black/40 border-2 border-dashed border-white/10 flex items-center justify-center overflow-hidden hover:border-indigo-500/50 transition-colors">
-                             {teamLogo ? (
-                                 <img src={teamLogo} alt="Logo" className="w-full h-full object-contain p-2" />
-                             ) : (
-                                 <Upload className="w-6 h-6 text-slate-500 group-hover:text-indigo-400" />
-                             )}
+                {/* Header: Logo & Name */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-16 relative z-10">
+                     <div className="flex items-center gap-6">
+                         <div className="relative group cursor-pointer" onClick={() => logoInputRef.current?.click()}>
+                             <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                             <div className="w-24 h-24 rounded-2xl bg-black/40 border-2 border-dashed border-white/10 flex items-center justify-center overflow-hidden hover:border-indigo-500/50 transition-colors">
+                                 {teamLogo ? (
+                                     <img src={teamLogo} alt="Logo" className="w-full h-full object-contain p-2" />
+                                 ) : (
+                                     <Upload className="w-6 h-6 text-slate-500 group-hover:text-indigo-400" />
+                                 )}
+                             </div>
+                             <div className="absolute -bottom-2 w-full text-center">
+                                 <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">LOGO</span>
+                             </div>
                          </div>
-                         <div className="absolute -bottom-2 w-full text-center">
-                             <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">LOGO</span>
+                         <div>
+                             <label className="text-xs text-slate-500 uppercase font-bold tracking-widest mb-1 block">Nome do Elenco</label>
+                             <input 
+                               type="text" 
+                               value={squadName} 
+                               onChange={(e) => setSquadName(e.target.value)}
+                               className="bg-transparent text-4xl md:text-5xl font-black text-white border-b-2 border-transparent hover:border-white/10 focus:border-indigo-500 focus:outline-none transition-all w-full md:w-auto uppercase tracking-tight"
+                             />
                          </div>
                      </div>
-                     <div>
-                         <label className="text-xs text-slate-500 uppercase font-bold tracking-widest mb-1 block">Nome do Elenco</label>
-                         <input 
-                           type="text" 
-                           value={squadName} 
-                           onChange={(e) => setSquadName(e.target.value)}
-                           className="bg-transparent text-4xl md:text-5xl font-black text-white border-b-2 border-transparent hover:border-white/10 focus:border-indigo-500 focus:outline-none transition-all w-full md:w-auto uppercase tracking-tight"
-                         />
-                     </div>
-                 </div>
-                 
-                 {/* Mobile Salary Display */}
-                 <div className="md:hidden w-full p-3 bg-emerald-900/10 border border-emerald-500/10 rounded-xl text-center">
-                     <span className="text-xs text-emerald-500 font-bold uppercase">Total: </span>
-                     <span className="text-emerald-300 font-mono font-bold">{formatCurrency(totalSalary)}</span>
-                 </div>
-            </div>
+                </div>
 
-            {/* --- GRID LAYOUT (Blueprint Style) --- */}
-            
-            <div className="flex flex-col gap-12 relative z-10">
+                {/* --- GRID LAYOUT (Blueprint Style) --- */}
                 
-                {/* 1. Staff Row (Centered) */}
-                <div className="flex flex-col items-center">
-                    <div className="flex gap-4 md:gap-8 justify-center w-full max-w-2xl">
-                        <div className="w-48 md:w-56">
-                            {slots.find(s => s.id === 'coach') && <SlotCard slot={slots.find(s => s.id === 'coach')!} onEdit={setEditingSlotId} onViewStats={handleViewStats} />}
-                        </div>
-                        <div className="w-48 md:w-56">
-                            {slots.find(s => s.id === 'analyst') && <SlotCard slot={slots.find(s => s.id === 'analyst')!} onEdit={setEditingSlotId} onViewStats={handleViewStats} />}
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. Main Lineup Row (Centered, 4 Columns) */}
-                <div className="flex flex-col items-center w-full">
-                    <div className="text-center mb-4">
-                        <h3 className="text-xs text-slate-500 font-bold uppercase tracking-[0.2em] mb-2">Lineup Principal</h3>
-                        <div className="h-px w-24 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent mx-auto"></div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                         {['p1', 'p2', 'p3', 'p4'].map(id => {
-                             const slot = slots.find(s => s.id === id);
-                             return slot ? <SlotCard key={id} slot={slot} onEdit={setEditingSlotId} onViewStats={handleViewStats} /> : null;
-                         })}
-                    </div>
-                </div>
-
-                {/* 3. Reserves / Option 2 (Centered Grid) */}
-                <div className="flex flex-col items-center w-full pt-8 border-t border-white/5 border-dashed">
-                    <div className="flex items-center justify-between w-full mb-6">
-                        <h3 className="text-xs text-slate-500 font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-                            ↓ Opção 2 / Reservas
-                        </h3>
-                        <button 
-                            onClick={addReserveSlot}
-                            className="text-[10px] flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded border border-white/5 text-slate-400 transition-colors uppercase font-bold tracking-wider"
-                        >
-                            <Plus className="w-3 h-3" /> Add Slot
-                        </button>
-                    </div>
+                <div className="flex flex-col gap-12 relative z-10">
                     
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                        {slots.filter(s => s.type === 'reserve').map(slot => (
-                            <SlotCard key={slot.id} slot={slot} onEdit={setEditingSlotId} onViewStats={handleViewStats} />
-                        ))}
-                        {slots.filter(s => s.type === 'reserve').length === 0 && (
-                            <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-xl text-slate-700 text-xs uppercase tracking-widest">
-                                Nenhum reserva adicionado.
+                    {/* 1. Staff Row (Centered) */}
+                    <div className="flex flex-col items-center">
+                        <div className="flex gap-4 md:gap-8 justify-center w-full max-w-2xl">
+                            <div className="w-48 md:w-56">
+                                {slots.find(s => s.id === 'coach') && <SlotCard slot={slots.find(s => s.id === 'coach')!} onEdit={setEditingSlotId} onViewStats={handleViewStats} />}
                             </div>
-                        )}
+                            <div className="w-48 md:w-56">
+                                {slots.find(s => s.id === 'analyst') && <SlotCard slot={slots.find(s => s.id === 'analyst')!} onEdit={setEditingSlotId} onViewStats={handleViewStats} />}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 2. Main Lineup Row (Centered, 4 Columns) */}
+                    <div className="flex flex-col items-center w-full">
+                        <div className="text-center mb-4">
+                            <h3 className="text-xs text-slate-500 font-bold uppercase tracking-[0.2em] mb-2">Lineup Principal</h3>
+                            <div className="h-px w-24 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent mx-auto"></div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                             {['p1', 'p2', 'p3', 'p4'].map(id => {
+                                 const slot = slots.find(s => s.id === id);
+                                 return slot ? <SlotCard key={id} slot={slot} onEdit={setEditingSlotId} onViewStats={handleViewStats} /> : null;
+                             })}
+                        </div>
+                    </div>
+
+                    {/* 3. Reserves / Option 2 (Centered Grid) */}
+                    <div className="flex flex-col items-center w-full pt-8 border-t border-white/5 border-dashed">
+                        <div className="flex items-center justify-between w-full mb-6">
+                            <h3 className="text-xs text-slate-500 font-bold uppercase tracking-[0.2em] flex items-center gap-2">
+                                ↓ Opção 2 / Reservas
+                            </h3>
+                            <button 
+                                onClick={addReserveSlot}
+                                className="text-[10px] flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded border border-white/5 text-slate-400 transition-colors uppercase font-bold tracking-wider"
+                            >
+                                <Plus className="w-3 h-3" /> Add Slot
+                            </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                            {slots.filter(s => s.type === 'reserve').map(slot => (
+                                <SlotCard key={slot.id} slot={slot} onEdit={setEditingSlotId} onViewStats={handleViewStats} />
+                            ))}
+                            {slots.filter(s => s.type === 'reserve').length === 0 && (
+                                <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-xl text-slate-700 text-xs uppercase tracking-widest">
+                                    Nenhum reserva adicionado.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Branding Footer for Screenshot */}
+                <div className="mt-16 pt-6 border-t border-white/5 flex justify-between items-center opacity-40">
+                    <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 bg-indigo-600 rounded"></div>
+                        <span className="font-black text-white tracking-[0.2em] text-xs">JHANSTATS</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500 uppercase">
+                        Squad Builder • 2024
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* --- VIEW MODE 2: SUMMARY LIST --- */}
+        {viewMode === 'list' && (
+            <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden animate-fade-in shadow-2xl flex flex-col">
+                <div className="p-6 md:p-8 bg-[#0B0F19] border-b border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-amber-600/5 rounded-full blur-[100px] pointer-events-none"></div>
+                    <div className="relative z-10">
+                        <h2 className="text-3xl font-black text-white mb-2">{squadName}</h2>
+                        <p className="text-slate-400 text-sm">Resumo financeiro e estatístico do elenco montado.</p>
                     </div>
                 </div>
 
-            </div>
+                {/* Stats Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5 border-b border-white/5">
+                    <div className="bg-[#0B0F19] p-6 flex flex-col items-center justify-center gap-1">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Custo Mensal</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold text-emerald-400">{formatCurrency(totalSalary)}</span>
+                    </div>
+                    <div className="bg-[#0B0F19] p-6 flex flex-col items-center justify-center gap-1">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Poder de Fogo</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold text-amber-400">{squadStats.totalKills} <span className="text-xs text-slate-500">Kills</span></span>
+                    </div>
+                    <div className="bg-[#0B0F19] p-6 flex flex-col items-center justify-center gap-1">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Média do Time</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold text-indigo-400">{squadStats.avgKpg} <span className="text-xs text-slate-500">KPG</span></span>
+                    </div>
+                    <div className="bg-[#0B0F19] p-6 flex flex-col items-center justify-center gap-1">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Experiência</span>
+                        <span className="text-2xl md:text-3xl font-mono font-bold text-blue-400">{squadStats.totalMatches} <span className="text-xs text-slate-500">Jogos</span></span>
+                    </div>
+                </div>
 
-            {/* Branding Footer for Screenshot */}
-            <div className="mt-16 pt-6 border-t border-white/5 flex justify-between items-center opacity-40">
-                <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 bg-indigo-600 rounded"></div>
-                    <span className="font-black text-white tracking-[0.2em] text-xs">JHANSTATS</span>
-                </div>
-                <div className="text-[10px] font-mono text-slate-500 uppercase">
-                    Squad Builder • 2024
+                {/* Detailed Table */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-[#111623] border-b border-white/5 text-[10px] uppercase text-slate-500 font-bold tracking-wider">
+                                <th className="px-6 py-4">Slot / Função</th>
+                                <th className="px-6 py-4">Jogador</th>
+                                <th className="px-6 py-4 text-center">Salário</th>
+                                <th className="px-6 py-4 text-center">Palavra Chave</th>
+                                <th className="px-6 py-4 text-center text-amber-500">Abates</th>
+                                <th className="px-6 py-4 text-center text-blue-500">Partidas</th>
+                                <th className="px-6 py-4 text-center text-indigo-500">KPG</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5 bg-[#0B0F19]">
+                            {squadStats.roster.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500 text-sm">
+                                        Nenhum jogador adicionado ao elenco ainda.
+                                    </td>
+                                </tr>
+                            ) : (
+                                squadStats.roster.map((slot, idx) => (
+                                    <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-white bg-white/10 px-2 py-0.5 rounded w-fit mb-1 border border-white/5">
+                                                    {slot.role}
+                                                </span>
+                                                <span className="text-[10px] text-slate-500 uppercase">{slot.type}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                {slot.customImage ? (
+                                                    <img src={slot.customImage} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-500">
+                                                        <User className="w-4 h-4" />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <div className="font-bold text-white text-sm">{slot.assignedPlayer}</div>
+                                                    {slot.realStats && <div className="text-[10px] text-slate-500">{slot.realStats.team}</div>}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="font-mono text-sm text-emerald-400 font-bold bg-emerald-500/5 px-2 py-1 rounded border border-emerald-500/10">
+                                                {slot.salary ? formatCurrency(slot.salary) : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            {slot.definingWord ? (
+                                                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                                                    "{slot.definingWord}"
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-700">-</span>
+                                            )}
+                                        </td>
+                                        {/* Stats Columns */}
+                                        <td className="px-6 py-4 text-center font-mono font-bold text-amber-400">
+                                            {slot.realStats ? slot.realStats.totalKills : <span className="text-slate-700">-</span>}
+                                        </td>
+                                        <td className="px-6 py-4 text-center font-mono text-slate-400">
+                                            {slot.realStats ? slot.realStats.matches : <span className="text-slate-700">-</span>}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                             {slot.realStats ? (
+                                                 <span className={`font-mono text-xs px-2 py-1 rounded font-bold ${Number(slot.realStats.kpg) > 1.5 ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-500'}`}>
+                                                     {slot.realStats.kpg}
+                                                 </span>
+                                             ) : <span className="text-slate-700">-</span>}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
+        )}
 
         {/* --- EDIT MODAL --- */}
         {editingSlotId && (

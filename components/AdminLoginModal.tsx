@@ -15,7 +15,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'jhan1010') {
+    if (password === '2211') {
       onLogin(true);
       onClose();
       setPassword('');

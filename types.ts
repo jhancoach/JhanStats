@@ -54,3 +54,43 @@ export interface SortConfig<T> {
   key: keyof T;
   direction: SortDirection;
 }
+
+// Valuation Types
+export interface ValuationCompetition {
+  name: string;
+  type: string;
+  tier: string;
+}
+
+export interface ValuationTitle {
+  name: string;
+  count: number;
+}
+
+export interface ValuationParticipation {
+  name: string;
+  count: number;
+}
+
+export interface ValuationRecent {
+  name: string;
+  type: string;
+  position: number;
+}
+
+export interface ValuationForm {
+  playerName: string;
+  role: string;
+  isCaptain: boolean;
+  officialKills: number;
+  booyahs: number; // Only if captain
+  followers: number;
+  engagement: number;
+  
+  // Lists
+  competitionsDisputed: ValuationCompetition[];
+  titles: ValuationTitle[];
+  participations: ValuationParticipation[];
+  
+  recentCompetitions: ValuationRecent[];
+}
