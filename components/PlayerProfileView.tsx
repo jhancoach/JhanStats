@@ -32,18 +32,9 @@ interface PlayerProfileViewProps {
   players: KillStat[];
 }
 
-export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(players[0]?.player || '');
+// --- REUSABLE DETAILED PROFILE COMPONENT ---
+export const PlayerDetailedProfile: React.FC<{ player: KillStat }> = ({ player }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-
-  const filteredPlayers = useMemo(() => {
-    return players.filter(p => p.player.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [players, searchTerm]);
-
-  const player = useMemo(() => {
-    return players.find(p => p.player === selectedPlayerId) || players[0];
-  }, [players, selectedPlayerId]);
 
   // Process data for Chart & Split Cards (Matching Scout Logic)
   const seasonData = useMemo(() => {
@@ -95,19 +86,18 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
   };
 
   const handleDownloadImage = async () => {
-    const element = document.getElementById('profile-capture-area');
+    const element = document.getElementById(`profile-capture-${player.player}`);
     if (!element) return;
 
     setIsDownloading(true);
     try {
-        // Aguarda um pequeno delay para garantir que re-renderizações (se houver) estejam completas
         await new Promise(resolve => setTimeout(resolve, 100));
 
         const canvas = await html2canvas(element, {
-            backgroundColor: '#0B0F19', // Garante fundo escuro
-            scale: 2, // Alta resolução (Retina)
+            backgroundColor: '#0B0F19',
+            scale: 2,
             logging: false,
-            useCORS: true, // Para avatares/fontes
+            useCORS: true,
             allowTaint: true
         });
         
@@ -125,66 +115,29 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
 
   const getInitials = (name: string) => name ? name.substring(0, 2).toUpperCase() : '??';
 
-  if (!player) return null;
-
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-140px)] animate-fade-in relative">
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          #printable-profile, #printable-profile * { visibility: visible; }
-          #printable-profile {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: auto;
-            background: #0b0f19;
-            color: #fff;
-            padding: 20px;
-            z-index: 9999;
-          }
-          .no-print { display: none !important; }
-        }
-      `}</style>
-
-      {/* Sidebar - Player Selector */}
-      <div className="w-full lg:w-72 glass-panel rounded-2xl border border-white/10 flex flex-col shrink-0 h-[400px] lg:h-full no-print">
-        <div className="p-4 border-b border-white/5">
-           <div className="relative">
-             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
-             <input 
-               type="text" 
-               placeholder="Buscar Jogador..." 
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
-             />
-           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-           {filteredPlayers.map(p => (
-             <button
-               key={p.player}
-               onClick={() => setSelectedPlayerId(p.player)}
-               className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left group ${selectedPlayerId === p.player ? 'bg-indigo-600/10 border border-indigo-500/30' : 'hover:bg-white/5 border border-transparent'}`}
-             >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${selectedPlayerId === p.player ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 group-hover:text-white'}`}>
-                   {getInitials(p.player)}
-                </div>
-                <div className="flex-1 min-w-0">
-                   <div className={`font-bold truncate text-sm ${selectedPlayerId === p.player ? 'text-white' : 'text-slate-300'}`}>{p.player}</div>
-                   <div className="text-xs text-slate-500 truncate">{p.team}</div>
-                </div>
-             </button>
-           ))}
-        </div>
-      </div>
-
-      {/* Main Profile Content */}
       <div id="printable-profile" className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-10">
-         {/* Wrapper para Captura de Imagem (Captura todo o conteúdo, mesmo scrollado) */}
-         <div id="profile-capture-area" className="flex flex-col gap-6 p-1">
+         <style>{`
+            @media print {
+              body * { visibility: hidden; }
+              #printable-profile, #printable-profile * { visibility: visible; }
+              #printable-profile {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                background: #0b0f19;
+                color: #fff;
+                padding: 20px;
+                z-index: 9999;
+              }
+              .no-print { display: none !important; }
+            }
+          `}</style>
+         
+         {/* Wrapper para Captura de Imagem */}
+         <div id={`profile-capture-${player.player}`} className="flex flex-col gap-6 p-1">
             
              {/* 1. Header Hero */}
              <div className="bg-[#0B0F19] rounded-3xl p-6 md:p-8 border border-white/10 relative overflow-hidden shadow-2xl">
@@ -275,7 +228,7 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
                       <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={seasonData.slice().reverse()} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
                               <defs>
-                                  <linearGradient id="colorKillsGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <linearGradient id={`colorKillsGradient-${player.player}`} x1="0" y1="0" x2="0" y2="1">
                                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
                                       <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                                   </linearGradient>
@@ -292,7 +245,7 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
                                   dataKey="kills" 
                                   stroke="#818cf8" 
                                   strokeWidth={3} 
-                                  fill="url(#colorKillsGradient)" 
+                                  fill={`url(#colorKillsGradient-${player.player})`} 
                                   activeDot={{r: 6, strokeWidth: 0, fill: '#fff'}}
                                   animationDuration={500}
                               >
@@ -346,8 +299,64 @@ export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players })
              </div>
 
          </div>
-
       </div>
+  );
+};
+
+// --- MAIN COMPONENT ---
+export const PlayerProfileView: React.FC<PlayerProfileViewProps> = ({ players }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(players[0]?.player || '');
+
+  const filteredPlayers = useMemo(() => {
+    return players.filter(p => p.player.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [players, searchTerm]);
+
+  const player = useMemo(() => {
+    return players.find(p => p.player === selectedPlayerId) || players[0];
+  }, [players, selectedPlayerId]);
+
+  const getInitials = (name: string) => name ? name.substring(0, 2).toUpperCase() : '??';
+
+  if (!player) return null;
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-140px)] animate-fade-in relative">
+      {/* Sidebar - Player Selector */}
+      <div className="w-full lg:w-72 glass-panel rounded-2xl border border-white/10 flex flex-col shrink-0 h-[400px] lg:h-full no-print">
+        <div className="p-4 border-b border-white/5">
+           <div className="relative">
+             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+             <input 
+               type="text" 
+               placeholder="Buscar Jogador..." 
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
+             />
+           </div>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+           {filteredPlayers.map(p => (
+             <button
+               key={p.player}
+               onClick={() => setSelectedPlayerId(p.player)}
+               className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left group ${selectedPlayerId === p.player ? 'bg-indigo-600/10 border border-indigo-500/30' : 'hover:bg-white/5 border border-transparent'}`}
+             >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${selectedPlayerId === p.player ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 group-hover:text-white'}`}>
+                   {getInitials(p.player)}
+                </div>
+                <div className="flex-1 min-w-0">
+                   <div className={`font-bold truncate text-sm ${selectedPlayerId === p.player ? 'text-white' : 'text-slate-300'}`}>{p.player}</div>
+                   <div className="text-xs text-slate-500 truncate">{p.team}</div>
+                </div>
+             </button>
+           ))}
+        </div>
+      </div>
+
+      {/* Main Profile Content using Reusable Component */}
+      <PlayerDetailedProfile player={player} />
     </div>
   );
 };

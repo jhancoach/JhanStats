@@ -8,10 +8,12 @@ import { ComparisonModal } from './components/ComparisonModal';
 import { PlayerProfileView } from './components/PlayerProfileView';
 import { StandingsView } from './components/StandingsView';
 import { ScoutView } from './components/ScoutView';
+import { SquadBuilderView } from './components/SquadBuilderView';
+import { AnalyticsView } from './components/AnalyticsView';
 import { EntryScreen } from './components/EntryScreen';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EditPlayerModal } from './components/EditPlayerModal';
-import { Skull, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair, Radar } from 'lucide-react';
+import { Skull, LayoutDashboard, Menu, Swords, Sparkles, Home, Lock, Unlock, Globe, Calendar, Layers, Filter, User, Trophy, Crosshair, Radar, Shield, PieChart } from 'lucide-react';
 
 // URL da Planilha de Mais Abates
 const MAIS_ABATES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRSsZv3U56n8ZHV9t3f-RM6nS55HL3Ur4mM5E_VvAuDYZ-MMJ6AFBRxqiv1BEqIYwfbsumlhY8cW1az/pub?output=csv';
@@ -50,7 +52,7 @@ const normalizePlayerName = (name: string): string => {
 
 const App: React.FC = () => {
   const [showEntry, setShowEntry] = useState(true);
-  const [activeTab, setActiveTab] = useState<'kills' | 'ffwsbr' | 'standings' | 'laff'>('kills');
+  const [activeTab, setActiveTab] = useState<'kills' | 'ffwsbr' | 'standings' | 'laff' | 'squad' | 'analytics'>('kills');
   const [wbSubTab, setWbSubTab] = useState<WBSubTab>('general'); // Default to General as requested
   const [splitFilter, setSplitFilter] = useState<SplitFilter>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -245,8 +247,8 @@ const App: React.FC = () => {
       let datasets: KillStat[][] = [];
 
       // Determine datasets based on active tab AND split filter
-      // For 'profile' and 'scout' tab, we want all data available to search
-      if (wbSubTab === 'general' || wbSubTab === 'profile' || wbSubTab === 'scout') {
+      // For 'profile', 'scout', 'squad' and 'analytics' tab, we want all data available
+      if (wbSubTab === 'general' || wbSubTab === 'profile' || wbSubTab === 'scout' || activeTab === 'squad' || activeTab === 'analytics') {
           if (splitFilter === 'all') datasets = [raw24s1, raw24s2, raw25s1, raw25s2];
           else if (splitFilter === 'wb24s1') datasets = [raw24s1];
           else if (splitFilter === 'wb24s2') datasets = [raw24s2];
@@ -465,7 +467,7 @@ const App: React.FC = () => {
 
 
   const handlePlayerClick = (player: any) => {
-    if (activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff') {
+    if (activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff' || activeTab === 'analytics') {
       setSelectedPlayer(player);
     }
   };
@@ -524,11 +526,11 @@ const App: React.FC = () => {
                 </div>
               </div>
               
-              <div className="hidden md:block">
+              <div className="hidden xl:block">
                 <div className="ml-10 flex items-center space-x-2 bg-white/5 p-1.5 rounded-xl border border-white/5 backdrop-blur-sm">
                   <button 
                     onClick={() => setActiveTab('kills')}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                    className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
                       activeTab === 'kills' 
                       ? 'bg-gradient-to-b from-slate-800 to-black text-amber-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-amber-500/20' 
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -539,7 +541,7 @@ const App: React.FC = () => {
                   </button>
                   <button 
                     onClick={() => { setActiveTab('ffwsbr'); setWbSubTab('general'); }}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                    className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
                       activeTab === 'ffwsbr' 
                       ? 'bg-gradient-to-b from-slate-800 to-black text-indigo-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-indigo-500/20' 
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -549,19 +551,8 @@ const App: React.FC = () => {
                     Jogadores WB
                   </button>
                   <button 
-                    onClick={() => setActiveTab('laff')}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
-                      activeTab === 'laff' 
-                      ? 'bg-gradient-to-b from-slate-800 to-black text-orange-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-orange-500/20' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <Crosshair className={`w-4 h-4 ${activeTab === 'laff' ? 'text-orange-500' : ''}`} />
-                    LAFF
-                  </button>
-                  <button 
                      onClick={() => setActiveTab('standings')}
-                     className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                     className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
                       activeTab === 'standings' 
                       ? 'bg-gradient-to-b from-slate-800 to-black text-purple-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-purple-500/20' 
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -570,10 +561,43 @@ const App: React.FC = () => {
                     <Trophy className={`w-4 h-4 ${activeTab === 'standings' ? 'text-purple-500' : ''}`} />
                     FFWSBR
                   </button>
+                  <button 
+                    onClick={() => setActiveTab('analytics')}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'analytics' 
+                      ? 'bg-gradient-to-b from-slate-800 to-black text-cyan-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-cyan-500/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <PieChart className={`w-4 h-4 ${activeTab === 'analytics' ? 'text-cyan-500' : ''}`} />
+                    Dashboard
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('squad')}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'squad' 
+                      ? 'bg-gradient-to-b from-slate-800 to-black text-emerald-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-emerald-500/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Shield className={`w-4 h-4 ${activeTab === 'squad' ? 'text-emerald-500' : ''}`} />
+                    Elenco
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('laff')}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'laff' 
+                      ? 'bg-gradient-to-b from-slate-800 to-black text-orange-400 shadow-lg shadow-black/50 border border-white/10 ring-1 ring-orange-500/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Crosshair className={`w-4 h-4 ${activeTab === 'laff' ? 'text-orange-500' : ''}`} />
+                    LAFF
+                  </button>
                 </div>
               </div>
 
-              <div className="hidden md:flex items-center gap-4">
+              <div className="hidden xl:flex items-center gap-4">
                   {/* Home Button */}
                   <button 
                     onClick={() => setShowEntry(true)}
@@ -593,7 +617,7 @@ const App: React.FC = () => {
                   </button>
 
                   {/* Comparison Button */}
-                  {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff') && (
+                  {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff' || activeTab === 'analytics') && (
                     <button 
                       onClick={() => setIsComparisonOpen(true)}
                       className="group relative px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all duration-200 overflow-hidden"
@@ -608,7 +632,7 @@ const App: React.FC = () => {
                   )}
               </div>
 
-              <div className="-mr-2 flex md:hidden">
+              <div className="-mr-2 flex xl:hidden">
                 <button 
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   className="inline-flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 focus:outline-none"
@@ -621,7 +645,7 @@ const App: React.FC = () => {
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-             <div className="md:hidden bg-black/90 border-b border-white/10 backdrop-blur-xl">
+             <div className="xl:hidden bg-black/90 border-b border-white/10 backdrop-blur-xl">
                <div className="px-4 pt-4 pb-6 space-y-2">
                   <button 
                     onClick={() => { setActiveTab('kills'); setMobileMenuOpen(false); }}
@@ -640,14 +664,6 @@ const App: React.FC = () => {
                     <Globe className="w-5 h-5" /> Jogadores WB
                   </button>
                   <button 
-                    onClick={() => { setActiveTab('laff'); setMobileMenuOpen(false); }}
-                    className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
-                      activeTab === 'laff' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'text-slate-300'
-                    }`}
-                  >
-                    <Crosshair className="w-5 h-5" /> LAFF
-                  </button>
-                  <button 
                      onClick={() => { setActiveTab('standings'); setMobileMenuOpen(false); }}
                      className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
                       activeTab === 'standings' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' : 'text-slate-300'
@@ -655,11 +671,35 @@ const App: React.FC = () => {
                   >
                     <Trophy className="w-5 h-5" /> FFWSBR
                   </button>
+                  <button 
+                     onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }}
+                     className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
+                      activeTab === 'analytics' ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' : 'text-slate-300'
+                    }`}
+                  >
+                    <PieChart className="w-5 h-5" /> Dashboard
+                  </button>
+                  <button 
+                     onClick={() => { setActiveTab('squad'); setMobileMenuOpen(false); }}
+                     className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
+                      activeTab === 'squad' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'text-slate-300'
+                    }`}
+                  >
+                    <Shield className="w-5 h-5" /> Montar Elenco
+                  </button>
+                  <button 
+                    onClick={() => { setActiveTab('laff'); setMobileMenuOpen(false); }}
+                    className={`w-full text-left px-4 py-3 rounded-lg text-base font-medium flex items-center gap-3 ${
+                      activeTab === 'laff' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'text-slate-300'
+                    }`}
+                  >
+                    <Crosshair className="w-5 h-5" /> LAFF
+                  </button>
                   <div className="flex gap-2 mt-4 px-2">
                      <button onClick={() => { setShowEntry(true); setMobileMenuOpen(false); }} className="flex-1 py-2 bg-white/5 rounded text-sm">Início</button>
                      <button onClick={() => { handleAdminToggle(); setMobileMenuOpen(false); }} className={`flex-1 py-2 rounded text-sm ${isAdmin ? 'bg-amber-600' : 'bg-white/5'}`}>{isAdmin ? 'Sair Admin' : 'Admin'}</button>
                   </div>
-                  {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff') && (
+                  {(activeTab === 'kills' || activeTab === 'ffwsbr' || activeTab === 'laff' || activeTab === 'analytics') && (
                     <button 
                       onClick={() => { setIsComparisonOpen(true); setMobileMenuOpen(false); }}
                       className="mt-4 w-full px-4 py-3 rounded-lg text-base font-medium bg-indigo-600 text-white flex items-center gap-3 justify-center"
@@ -693,6 +733,14 @@ const App: React.FC = () => {
                     <>
                        Ranking <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">LAFF</span>
                     </>
+                  ) : activeTab === 'squad' ? (
+                    <>
+                       Montar <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">Elenco</span>
+                    </>
+                  ) : activeTab === 'analytics' ? (
+                    <>
+                       Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Visual</span>
+                    </>
                   ) : (
                      <>
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">FFWSBR</span>
@@ -706,6 +754,10 @@ const App: React.FC = () => {
                     ? 'Hub oficial de estatísticas dos Jogadores WB. Dados combinados e segmentados por temporada.'
                     : activeTab === 'laff'
                     ? 'Classificação de abates da Liga Amadora de Free Fire (LAFF).'
+                    : activeTab === 'squad'
+                    ? 'Simulador de Line-up. Monte seu time dos sonhos com dados reais e exporte.'
+                    : activeTab === 'analytics'
+                    ? 'Tabelas visuais detalhadas de Combate e Suporte.'
                     : 'Tabelas de classificação oficiais atualizadas de todas as edições do FFWS Brasil.'
                   }
                 </p>
@@ -799,6 +851,13 @@ const App: React.FC = () => {
                     players25s2={wb2025S2Players}
                     onPlayerClick={handlePlayerClick}
                   />
+              ) : activeTab === 'squad' ? (
+                  <SquadBuilderView players={mergedFFWSData} />
+              ) : activeTab === 'analytics' ? (
+                  <AnalyticsView 
+                    players={mergedFFWSData} 
+                    onPlayerClick={handlePlayerClick} 
+                  />
               ) : activeTab === 'ffwsbr' && isLoadingFFWS ? (
                   <div className="h-[400px] flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-pulse">
                       <div className="flex flex-col items-center gap-4">
@@ -836,8 +895,8 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* Sidebar (Hide in Profile View, Scout and Standings to give full width) */}
-            {(activeTab !== 'standings' && (activeTab !== 'ffwsbr' || (wbSubTab !== 'profile' && wbSubTab !== 'scout'))) && (
+            {/* Sidebar (Hide in Profile, Scout, Standings, Squad, Analytics to give full width) */}
+            {(activeTab !== 'standings' && activeTab !== 'squad' && activeTab !== 'analytics' && (activeTab !== 'ffwsbr' || (wbSubTab !== 'profile' && wbSubTab !== 'scout'))) && (
               <StatsPanel 
                 killsData={activeTab === 'ffwsbr' ? mergedFFWSData : activeTab === 'laff' ? LAFF_STATS : killStats} 
                 activeTab={activeTab as any}
@@ -856,7 +915,7 @@ const App: React.FC = () => {
              </div>
              <p className="text-slate-500 text-sm">
                &copy; 2024 JhanStats.
-               {activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff' ? (
+               {activeTab === 'ffwsbr' || activeTab === 'standings' || activeTab === 'laff' || activeTab === 'squad' || activeTab === 'analytics' ? (
                   <> Dados tratados por <span className="text-slate-400 font-medium">Jhan</span>.</>
                ) : (
                   <> Dados fornecidos por <span className="text-slate-400 font-medium">Liquipedia</span>.</>
